@@ -1,4 +1,4 @@
-import { searchDriverByPlate } from "./driverSearch.service.js";
+import { searchDriverByPlate } from "./driverService.js";
 
 async function searchDriver(req, res) {
   try {

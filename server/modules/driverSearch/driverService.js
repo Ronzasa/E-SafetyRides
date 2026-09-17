@@ -1,8 +1,5 @@
-import {
-  findVehicleByPlate,
-  createVehicle,
-} from "./driverSearch.repository.js";
-import { normalisePlate } from "./driver.validation.js";
+import { findVehicleByPlate, createVehicle } from "./driverRespiratory.js";
+import { normalisePlate } from "./driverValidation.js";
 
 async function searchDriverByPlate(plateNumber) {
   const normalisedPlate = normalisePlate(plateNumber);

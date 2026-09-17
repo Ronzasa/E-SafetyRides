@@ -1,5 +1,5 @@
 import express from "express";
-import { searchDriver } from "./driverSearch.controller.js";
+import { searchDriver } from "./driverController.js";
 
 const router = express.Router();
 

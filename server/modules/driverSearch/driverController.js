@@ -2,18 +2,27 @@ import {
   searchDriverByPlate,
   verifyDriverVehicle,
   checkIdentityConsistency,
+  searchDriverByName,
 } from "./driverService.js";
+
+import {
+  normalisePlate,
+  isValidPlate,
+  isValidNameQuery,
+} from "./driverValidation.js";
 
 async function searchDriver(req, res) {
   try {
     const { plateNumber } = req.params;
+    const normalised = normalisePlate(plateNumber || "");
 
-    if (!plateNumber) {
-      return res.status(400).json({ message: "Plate number is required." });
+    if (!normalised || !isValidPlate(normalised)) {
+      return res
+        .status(400)
+        .json({ message: "Please enter a valid plate number." });
     }
 
-    const result = await searchDriverByPlate(plateNumber);
-
+    const result = await searchDriverByPlate(normalised);
     return res.status(200).json(result);
   } catch (error) {
     console.error("Driver search error:", error);
@@ -62,4 +71,20 @@ async function checkIdentity(req, res) {
   }
 }
 
-export { searchDriver, verifyDriver, checkIdentity };
+async function searchDriverByNameHandler(req, res) {
+  try {
+    const { name } = req.query;
+
+    if (!name || !isValidNameQuery(name)) {
+      return res.status(400).json({ message: "Please enter a valid name." });
+    }
+
+    const result = await searchDriverByName(name);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Driver name search error:", error);
+    return res.status(500).json({ message: "Unable to search by name." });
+  }
+}
+
+export { searchDriver, verifyDriver, checkIdentity, searchDriverByNameHandler };

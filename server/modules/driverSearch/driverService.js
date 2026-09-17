@@ -6,6 +6,8 @@ import {
   linkDriverToVehicle,
   createVerification,
   findVerificationsByVehicleId,
+  findDriversByName,
+  findVehiclesByIds,
 } from "./driverRespiratory.js";
 
 import { normalisePlate } from "./driverValidation.js";
@@ -18,11 +20,18 @@ async function searchDriverByPlate(plateNumber) {
   if (vehicle) {
     const drivers = await findDriversByIds(vehicle.driverIds || []);
 
-    return {
+    const result = {
       status: "KNOWN",
       vehicle,
       drivers,
     };
+
+    if ((vehicle.driverIds || []).length > 1) {
+      result.multipleDriversWarning =
+        "This vehicle has been linked to more than one driver identity.";
+    }
+
+    return result;
   }
 
   const newVehicle = await createVehicle({
@@ -134,4 +143,32 @@ async function checkIdentityConsistency(plateNumber, claimedDriverId) {
   };
 }
 
-export { searchDriverByPlate, verifyDriverVehicle, checkIdentityConsistency };
+async function searchDriverByName(nameQuery) {
+  const drivers = await findDriversByName(nameQuery);
+
+  if (drivers.length === 0) {
+    return {
+      status: "NO_MATCH",
+      drivers: [],
+    };
+  }
+
+  const driversWithVehicles = await Promise.all(
+    drivers.map(async (driver) => {
+      const vehicles = await findVehiclesByIds(driver.vehicleIds || []);
+      return { ...driver, vehicles };
+    }),
+  );
+
+  return {
+    status: "FOUND",
+    drivers: driversWithVehicles,
+  };
+}
+
+export {
+  searchDriverByPlate,
+  verifyDriverVehicle,
+  checkIdentityConsistency,
+  searchDriverByName,
+};

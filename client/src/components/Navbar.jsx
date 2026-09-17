@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -11,31 +11,55 @@ export function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to={user.role === 'admin' ? '/admin/reports' : '/my-reports'} className="navbar-brand">
+      <Link
+        to={user.role === "admin" ? "/admin/reports" : "/my-reports"}
+        className="navbar-brand"
+      >
         SafeRide<span>SA</span>
       </Link>
 
       <div className="navbar-links">
-        {user.role !== 'admin' && (
+        {user.role !== "admin" && (
           <>
-            <Link to="/report" className={isActive('/report') ? 'navbar-link-active' : ''}>
+            <Link
+              to="/report"
+              className={isActive("/report") ? "navbar-link-active" : ""}
+            >
               Report
             </Link>
-            <Link to="/my-reports" className={isActive('/my-reports') ? 'navbar-link-active' : ''}>
+            <Link
+              to="/my-reports"
+              className={isActive("/my-reports") ? "navbar-link-active" : ""}
+            >
               My reports
             </Link>
-            <Link to="/browse" className={isActive('/browse') ? 'navbar-link-active' : ''}>
+            <Link
+              to="/browse"
+              className={isActive("/browse") ? "navbar-link-active" : ""}
+            >
               Browse
+            </Link>
+            <Link
+              to="/driver-search"
+              className={isActive("/driver-search") ? "navbar-link-active" : ""}
+            >
+              Driver Search
             </Link>
           </>
         )}
 
-        {user.role === 'admin' && (
+        {user.role === "admin" && (
           <>
-            <Link to="/admin/reports" className={isActive('/admin/reports') ? 'navbar-link-active' : ''}>
+            <Link
+              to="/admin/reports"
+              className={isActive("/admin/reports") ? "navbar-link-active" : ""}
+            >
               Review queue
             </Link>
-            <Link to="/admin/trends" className={isActive('/admin/trends') ? 'navbar-link-active' : ''}>
+            <Link
+              to="/admin/trends"
+              className={isActive("/admin/trends") ? "navbar-link-active" : ""}
+            >
               Trends
             </Link>
           </>
@@ -44,7 +68,9 @@ export function Navbar() {
 
       <div className="navbar-user">
         <span className="navbar-username">{user.name}</span>
-        <button className="btn-secondary btn-sm" onClick={logout}>Log out</button>
+        <button className="btn-secondary btn-sm" onClick={logout}>
+          Log out
+        </button>
       </div>
     </nav>
   );

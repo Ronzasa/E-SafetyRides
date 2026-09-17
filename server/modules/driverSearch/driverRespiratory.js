@@ -116,6 +116,34 @@ async function findVerificationsByVehicleId(vehicleId) {
     ...document.data(),
   }));
 }
+async function findDriversByName(nameQuery) {
+  const searchTerm = nameQuery.trim().toLowerCase();
+
+  const snapshot = await db.collection("drivers").get();
+
+  const matches = [];
+  snapshot.forEach((document) => {
+    const data = document.data();
+    if (data.name && data.name.toLowerCase().includes(searchTerm)) {
+      matches.push({ id: document.id, ...data });
+    }
+  });
+
+  return matches;
+}
+async function findVehiclesByIds(vehicleIds) {
+  const vehicles = [];
+
+  for (const vehicleId of vehicleIds) {
+    const document = await db.collection("vehicles").doc(vehicleId).get();
+
+    if (document.exists) {
+      vehicles.push({ id: document.id, ...document.data() });
+    }
+  }
+
+  return vehicles;
+}
 
 export {
   findVehicleByPlate,
@@ -125,4 +153,6 @@ export {
   linkDriverToVehicle,
   createVerification,
   findVerificationsByVehicleId,
+  findDriversByName,
+  findVehiclesByIds,
 };

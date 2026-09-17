@@ -56,10 +56,23 @@ async function getCorroborations(id) {
   }
 }
 
+async function getIncidents(filters = {}) {
+  const params = new URLSearchParams(
+    Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
+  ).toString();
+  try {
+    const data = await apiGet(`/reports${params ? `?${params}` : ''}`);
+    return { success: true, incidents: data.incidents };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 export {
   createIncident,
   uploadEvidence,
   getMyIncidents,
+  getIncidents,
   getIncident,
   addCorroboration,
   getCorroborations,

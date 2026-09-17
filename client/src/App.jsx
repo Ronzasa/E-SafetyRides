@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import IncidentReportForm from './features/reports/components/IncidentReportForm';
 import MyReportsList from './features/reports/components/MyReportsList';
+import BrowseReports from './features/reports/components/BrowseReports';
 
 function App() {
   const [view, setView] = useState('report');
@@ -35,6 +36,17 @@ function App() {
             >
               My Reports
             </button>
+
+            <button
+              type="button"
+              onClick={() => setView('browse')}
+              className={`px-3 py-1.5 rounded-md font-medium ${
+                view === 'browse' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Browse
+            </button>
+
           </nav>
         </div>
       </header>
@@ -42,6 +54,7 @@ function App() {
       <main className="py-8">
         {view === 'report' && <IncidentReportForm onSuccess={handleReportSuccess} />}
         {view === 'mine' && <MyReportsList refreshKey={refreshKey} />}
+        {view === 'browse' && <BrowseReports />}
       </main>
     </div>
   );

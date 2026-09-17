@@ -1,13 +1,8 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// TEMPORARY — the backend is running on tempAuth (see server/middleware/tempAuth.js),
-// which fakes req.user from a ?testUser= query param. Swap this out once Member 4's
-// real auth module lands and we're attaching a real JWT instead.
-const DEV_USER_ID = 'dev-user-1';
-
-function withTempAuth(path) {
-  const separator = path.includes('?') ? '&' : '?';
-  return `${path}${separator}testUser=${DEV_USER_ID}`;
+function authHeaders() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function parseResponse(res) {
@@ -22,25 +17,25 @@ async function parseResponse(res) {
 }
 
 async function apiGet(path, { auth = false } = {}) {
-  const url = auth ? withTempAuth(`${BASE_URL}${path}`) : `${BASE_URL}${path}`;
-  const res = await fetch(url);
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: auth ? authHeaders() : {},
+  });
   return parseResponse(res);
 }
 
 async function apiPost(path, body, { auth = false } = {}) {
-  const url = auth ? withTempAuth(`${BASE_URL}${path}`) : `${BASE_URL}${path}`;
-  const res = await fetch(url, {
+  const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(auth ? authHeaders() : {}) },
     body: JSON.stringify(body),
   });
   return parseResponse(res);
 }
 
 async function apiUpload(path, formData) {
-  const url = withTempAuth(`${BASE_URL}${path}`);
-  const res = await fetch(url, {
+  const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
+    headers: authHeaders(),
     body: formData,
   });
   return parseResponse(res);

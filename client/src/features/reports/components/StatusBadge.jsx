@@ -1,8 +1,8 @@
 const STATUS_STYLES = {
   pending: { label: 'Pending review', className: 'bg-gray-100 text-gray-700' },
-  reviewing: { label: 'Under review', className: 'bg-yellow-100 text-yellow-800' },
+  under_review: { label: 'Under review', className: 'bg-yellow-100 text-yellow-800' },
   confirmed: { label: 'Confirmed', className: 'bg-orange-100 text-orange-800' },
-  dismissed: { label: 'Dismissed', className: 'bg-gray-100 text-gray-500' },
+  rejected: { label: 'Rejected', className: 'bg-gray-100 text-gray-500' },
 };
 
 function StatusBadge({ status }) {

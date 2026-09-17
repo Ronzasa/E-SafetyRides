@@ -1,4 +1,4 @@
-import { getReviewQueue, updateReportStatus, getTrends } from './admin.service.js';
+import { getReviewQueue, updateReportStatus, getTrends, getOverviewStats, listUsers, getReportDetail } from './admin.service.js';
 
 export async function reviewQueue(req, res) {
     try {
@@ -42,6 +42,39 @@ export async function trends(req, res) {
         res.status(200).json({ success: true, ...data });
     } catch (err) {
         console.error('trends error:', err);
+        res.status(500).json({ success: false, error: 'Something went wrong' });
+    }
+}
+
+export async function overview(req, res) {
+    try {
+        const stats = await getOverviewStats();
+        res.status(200).json({ success: true, ...stats });
+    } catch (err) {
+        console.error('overview error:', err);
+        res.status(500).json({ success: false, error: 'Something went wrong' });
+    }
+}
+
+export async function users(req, res) {
+    try {
+        const users = await listUsers();
+        res.status(200).json({ success: true, count: users.length, users });
+    } catch (err) {
+        console.error('users error:', err);
+        res.status(500).json({ success: false, error: 'Something went wrong' });
+    }
+}
+
+export async function reportDetail(req, res) {
+    try {
+        const detail = await getReportDetail(req.params.id);
+        if (!detail) {
+            return res.status(404).json({ success: false, error: 'Incident not found' });
+        }
+        res.status(200).json({ success: true, ...detail });
+    } catch (err) {
+        console.error('reportDetail error:', err);
         res.status(500).json({ success: false, error: 'Something went wrong' });
     }
 }

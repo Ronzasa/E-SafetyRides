@@ -12,7 +12,7 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <Link to={user.role === 'admin' ? '/admin/reports' : '/my-reports'} className="navbar-brand">
-        SafeRide<span>SA</span>
+        E-Safety<span>Rides</span>
       </Link>
 
       <div className="navbar-links">
@@ -36,7 +36,10 @@ export function Navbar() {
               Review queue
             </Link>
             <Link to="/admin/trends" className={isActive('/admin/trends') ? 'navbar-link-active' : ''}>
-              Trends
+              Dashboard
+            </Link>
+            <Link to="/admin/users" className={isActive('/admin/users') ? 'navbar-link-active' : ''}>
+              Users
             </Link>
           </>
         )}

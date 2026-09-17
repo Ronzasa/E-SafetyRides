@@ -26,9 +26,7 @@ function BrowseReports() {
       setLoading(false);
     }
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [filters]);
 
   function handleFilterChange(e) {
@@ -36,53 +34,36 @@ function BrowseReports() {
   }
 
   return (
-    <div className="max-w-lg mx-auto p-6 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-1">Browse Reports</h2>
-        <p className="text-sm text-gray-500">
-          Reports are shown as safety signals from other passengers, not confirmed accusations.
-        </p>
-      </div>
+    <div className="page-container">
+      <header className="page-header">
+        <div>
+          <h1>Browse reports</h1>
+          <p className="page-subtitle">Safety signals from other passengers — not confirmed accusations.</p>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-3 gap-3">
-        <input
-          name="area"
-          value={filters.area}
-          onChange={handleFilterChange}
-          placeholder="Area"
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <select
-          name="platform"
-          value={filters.platform}
-          onChange={handleFilterChange}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+      <div className="filter-bar">
+        <input name="area" value={filters.area} onChange={handleFilterChange} placeholder="Area" />
+        <select name="platform" value={filters.platform} onChange={handleFilterChange}>
           <option value="">All platforms</option>
-          {PLATFORMS.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
+          {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select
-          name="severity"
-          value={filters.severity}
-          onChange={handleFilterChange}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <select name="severity" value={filters.severity} onChange={handleFilterChange}>
           <option value="">All severities</option>
-          {SEVERITIES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
+          {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 
-      {loading && <p className="text-center text-sm text-gray-500 py-8">Loading reports...</p>}
-      {error && <p className="text-center text-sm text-red-600 py-8">{error}</p>}
+      {loading && <p className="text-muted-sm">Loading reports...</p>}
+      {error && <div className="auth-error">{error}</div>}
       {!loading && !error && incidents.length === 0 && (
-        <p className="text-center text-sm text-gray-500 py-8">No reports match these filters.</p>
+        <div className="empty-state card">
+          <h2>No reports match these filters</h2>
+          <p>Try adjusting your filters or check back later.</p>
+        </div>
       )}
 
-      <div className="space-y-4">
+      <div className="report-grid">
         {incidents.map((incident) => (
           <IncidentCard key={incident.id} incident={incident} />
         ))}

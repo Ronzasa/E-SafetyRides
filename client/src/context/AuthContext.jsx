@@ -5,14 +5,11 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!localStorage.getItem('token'));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
     api.get('/auth/me')
       .then((data) => setUser(data.user))
       .catch(() => localStorage.removeItem('token'))
@@ -45,6 +42,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- colocated hook; editing this file triggers a full reload instead of fast refresh
 export function useAuth() {
   return useContext(AuthContext);
 }

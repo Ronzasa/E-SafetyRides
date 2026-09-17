@@ -1,4 +1,8 @@
-import { searchDriverByPlate } from "./driverService.js";
+import {
+  searchDriverByPlate,
+  verifyDriverVehicle,
+  checkIdentityConsistency,
+} from "./driverService.js";
 
 async function searchDriver(req, res) {
   try {
@@ -17,4 +21,45 @@ async function searchDriver(req, res) {
   }
 }
 
-export { searchDriver };
+async function verifyDriver(req, res) {
+  try {
+    const { plateNumber, driverId } = req.body;
+
+    if (!plateNumber || !driverId) {
+      return res
+        .status(400)
+        .json({ message: "plateNumber and driverId are both required." });
+    }
+
+    const result = await verifyDriverVehicle(plateNumber, driverId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Driver verification error:", error);
+    const statusCode = error.statusCode || 500;
+    return res
+      .status(statusCode)
+      .json({ message: error.message || "Unable to verify driver." });
+  }
+}
+
+async function checkIdentity(req, res) {
+  try {
+    const { plateNumber, driverId } = req.body;
+
+    if (!plateNumber || !driverId) {
+      return res
+        .status(400)
+        .json({ message: "plateNumber and driverId are both required." });
+    }
+
+    const result = await checkIdentityConsistency(plateNumber, driverId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Identity check error:", error);
+    return res.status(500).json({ message: "Unable to check identity." });
+  }
+}
+
+export { searchDriver, verifyDriver, checkIdentity };

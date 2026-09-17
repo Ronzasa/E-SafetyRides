@@ -23,8 +23,8 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await register(name, email, password, confirmPassword);
-      navigate('/my-reports');
+      const registeredUser = await register(name, email, password, confirmPassword);
+      navigate(registeredUser.role === 'admin' ? '/admin/reports' : '/my-reports');
     } catch (err) {
       setError(err.message);
     } finally {

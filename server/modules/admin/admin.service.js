@@ -1,6 +1,7 @@
 import { db } from '../../config/firebase.js';
 
 const incidentsRef = db.collection('incidents');
+const usersRef = db.collection('users');
 
 const VALID_STATUSES = ['pending', 'under_review', 'confirmed', 'rejected'];
 
@@ -57,4 +58,65 @@ export async function getTrends({ area, platform, severity } = {}) {
         byPlatform,
         bySeverity,
     };
+}
+
+export async function getOverviewStats() {
+    const [usersSnapshot, incidentsSnapshot, pendingSnapshot] = await Promise.all([
+        usersRef.get(),
+        incidentsRef.get(),
+        incidentsRef.where('status', '==', 'pending').get(),
+    ]);
+
+    const totalUsers = usersSnapshot.size;
+    const totalIncidents = incidentsSnapshot.size;
+    const pendingCount = pendingSnapshot.size;
+
+    const incidents = incidentsSnapshot.docs.map(doc => doc.data());
+    const confirmedCount = incidents.filter(i => i.status === 'confirmed').length;
+
+    return { totalUsers, totalIncidents, pendingCount, confirmedCount };
+}
+
+export async function listUsers() {
+    const snapshot = await usersRef.orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            uid: doc.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            createdAt: data.createdAt,
+        };
+    });
+}
+
+export async function getReportDetail(incidentId) {
+    const incidentDoc = await incidentsRef.doc(incidentId).get();
+    if (!incidentDoc.exists) return null;
+
+    const incident = { id: incidentDoc.id, ...incidentDoc.data() };
+
+    // Resolve reporter name (admin-only — public API never exposes this)
+    let reporter = null;
+    if (incident.reporterId) {
+        const userDoc = await usersRef.doc(incident.reporterId).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            reporter = { uid: userDoc.id, name: userData.name, email: userData.email };
+        }
+    }
+
+    // Fetch corroborations (admin sees notes + timestamps, still no corroborator identity)
+    const corroborationsRef = db.collection('corroborations');
+    const corrSnapshot = await corroborationsRef
+        .where('incidentId', '==', incidentId)
+        .orderBy('createdAt', 'desc')
+        .get();
+    const corroborations = corrSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, note: data.note, createdAt: data.createdAt };
+    });
+
+    return { incident, reporter, corroborations };
 }

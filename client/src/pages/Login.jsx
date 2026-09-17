@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,10 +11,24 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Show a message if the user just registered or reset their password
+  const message = location.state?.message || '';
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (!EMAIL_REGEX.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
     setLoading(true);
     try {
       const loggedInUser = await login(email, password);
@@ -28,8 +44,9 @@ export default function Login() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>Welcome back</h1>
-        <p className="auth-subtitle">Log in to SafeRide SA</p>
+        <p className="auth-subtitle">Log in to E-SafetyRides</p>
 
+        {message && <div className="auth-success">{message}</div>}
         {error && <div className="auth-error">{error}</div>}
 
         <label htmlFor="email">Email</label>
@@ -38,6 +55,7 @@ export default function Login() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
           required
           autoFocus
         />
@@ -50,6 +68,10 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        <div style={{ textAlign: 'right', marginTop: '0.4rem' }}>
+          <Link to="/forgot-password" style={{ fontSize: '0.85rem' }}>Forgot password?</Link>
+        </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Logging in...' : 'Log in'}

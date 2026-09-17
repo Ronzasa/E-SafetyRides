@@ -17,9 +17,17 @@ export function Navbar() {
 
       <div className="navbar-links">
         {user.role !== 'admin' && (
-          <Link to="/my-reports" className={isActive('/my-reports') ? 'navbar-link-active' : ''}>
-            My reports
-          </Link>
+          <>
+            <Link to="/report" className={isActive('/report') ? 'navbar-link-active' : ''}>
+              Report
+            </Link>
+            <Link to="/my-reports" className={isActive('/my-reports') ? 'navbar-link-active' : ''}>
+              My reports
+            </Link>
+            <Link to="/browse" className={isActive('/browse') ? 'navbar-link-active' : ''}>
+              Browse
+            </Link>
+          </>
         )}
 
         {user.role === 'admin' && (

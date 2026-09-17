@@ -17,18 +17,29 @@ export default function AdminReportQueue() {
   const [error, setError] = useState('');
   const [actioningId, setActioningId] = useState(null);
 
-  function loadIncidents(status) {
-    setLoading(true);
-    setError('');
-    api.get(`/admin/reports?status=${status}`)
-      .then((data) => setIncidents(data.incidents))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }
-
   useEffect(() => {
-    loadIncidents(activeTab);
+    let cancelled = false;
+    api.get(`/admin/reports?status=${activeTab}`)
+      .then((data) => {
+        if (!cancelled) setIncidents(data.incidents);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [activeTab]);
+
+  function handleTabChange(tab) {
+    if (tab === activeTab) return;
+    setError('');
+    setLoading(true);
+    setActiveTab(tab);
+  }
 
   async function handleModerate(id, newStatus) {
     setActioningId(id);
@@ -56,7 +67,7 @@ export default function AdminReportQueue() {
           <button
             key={tab}
             className={`tab-btn ${activeTab === tab ? 'tab-btn-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
           >
             {TAB_LABEL[tab]}
           </button>

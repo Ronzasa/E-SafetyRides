@@ -1,5 +1,5 @@
 import express from 'express';
-import tempAuth from '../../middleware/tempAuth.js';
+import { requireAuth } from '../../middleware/auth.middleware.js';
 import upload from '../../middleware/upload.js';
 import {
   handleCreateIncident,
@@ -13,12 +13,12 @@ import {
 
 const router = express.Router();
 
-router.post('/', tempAuth, handleCreateIncident);
+router.post('/', requireAuth, handleCreateIncident);
 router.get('/', handleListIncidents);
-router.get('/mine', tempAuth, handleGetMyIncidents);
-router.post('/:id/evidence', tempAuth, upload.single('evidence'), handleUploadEvidence);
+router.get('/mine', requireAuth, handleGetMyIncidents);
+router.post('/:id/evidence', requireAuth, upload.single('evidence'), handleUploadEvidence);
 router.get('/:id', handleGetIncident);
-router.post('/:id/corroborate', tempAuth, handleAddCorroboration);
+router.post('/:id/corroborate', requireAuth, handleAddCorroboration);
 router.get('/:id/corroborations', handleGetCorroborations);
 
 export default router;

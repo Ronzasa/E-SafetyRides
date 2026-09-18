@@ -24,7 +24,7 @@ export function Navbar() {
         className="navbar-brand"
         onClick={closeMenu}
       >
-        SafeRide<span>SA</span>
+        E-Safety<span>Rides</span>
       </Link>
 
       {/* Hamburger toggle — mobile only */}

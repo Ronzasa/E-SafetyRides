@@ -26,10 +26,10 @@ Error responses: `{ "error": "message" }` (auth module) or `{ "success": false, 
 
 | Method | Path | Auth | Body / Query | Notes |
 |---|---|---|---|---|
-| POST | `/` | required | `{ plate, driverName?, platform, vehicleType, type, severity, description, area }` | Creates with `status: "pending"` |
-| GET | `/` | none | `?area&platform&severity&status` | Public — only ever returns `under_review`/`confirmed` unless a specific status is requested |
+| POST | `/` | required | `{ plate, driverName?, platform, vehicleType, type, severity, description, area }` | Creates with `status: "pending"`; `plate` must be 1-8 letters/digits after normalisation |
+| GET | `/` | none | `?area&platform&severity&status` | Public — only ever returns `under_review`/`confirmed` unless a specific status is requested; never exposes `reporterId` |
 | GET | `/mine` | required | — | Current user's own reports, any status |
-| GET | `/:id` | none | — | Single incident |
+| GET | `/:id` | none | — | Single incident; never exposes `reporterId` |
 | POST | `/:id/evidence` | required | `multipart/form-data`, field `evidence` | Uploads one image to Cloudinary |
 | POST | `/:id/corroborate` | required | `{ note? }` | Can't corroborate your own report |
 | GET | `/:id/corroborations` | none | — | List of corroborations (no reporter identity exposed) |
@@ -43,7 +43,7 @@ Error responses: `{ "error": "message" }` (auth module) or `{ "success": false, 
 |---|---|---|---|
 | GET | `/reports` | `?status` (default `pending`) | Review queue |
 | GET | `/reports/:id` | — | Full detail: `{ incident, reporter: { uid, name, email }, corroborations[] }` |
-| PATCH | `/reports/:id` | `{ status }` | Moderation action |
+| PATCH | `/reports/:id` | `{ status }` | Moderation action; confirming runs the driver/vehicle linkage exactly once and self-heals legacy unlinked confirmations |
 | GET | `/trends` | `?area&platform&severity` | `{ total, byStatus, byArea, byPlatform, bySeverity }` |
 | GET | `/overview` | — | `{ totalUsers, totalIncidents, pendingCount, confirmedCount }` |
 | GET | `/users` | — | `{ count, users[] }` — list all registered users |

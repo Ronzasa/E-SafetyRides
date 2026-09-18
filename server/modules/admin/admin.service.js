@@ -1,4 +1,17 @@
 import { db } from '../../config/firebase.js';
+import { normalisePlate, normaliseNameKey, isValidPlate } from '../driverSearch/driverValidation.js';
+import {
+    findVehicleByPlate,
+    createVehicle,
+    findDriverByNameKey,
+    createDriver,
+    linkDriverVehiclePair,
+    markIncidentConfirmed,
+    linkConfirmedIncident,
+    addDriverPlatformIfMissing,
+    incrementDriverIncidentCount,
+    incrementVehicleIncidentCount,
+} from '../driverSearch/driverRepository.js';
 
 const incidentsRef = db.collection('incidents');
 const usersRef = db.collection('users');
@@ -21,12 +34,171 @@ export async function updateReportStatus(incidentId, newStatus) {
         throw err;
     }
 
+    // Confirmation is the only transition with side effects — it must run
+    // the driver/vehicle linkage exactly once, so it gets its own path.
+    if (newStatus === 'confirmed') {
+        return confirmReport(incidentId);
+    }
+
+    return setReportStatus(incidentId, newStatus);
+}
+
+// Plain status transitions (pending / under_review / rejected). Moving a
+// previously confirmed report away from 'confirmed' rolls back its effect
+// on the public safety profile so incident counts stay accurate.
+async function setReportStatus(incidentId, newStatus) {
     const docRef = incidentsRef.doc(incidentId);
     const doc = await docRef.get();
     if (!doc.exists) return null;
 
+    const incident = doc.data();
+
+    if (incident.status === 'confirmed') {
+        await rollbackConfirmation(incident);
+    }
+
     await docRef.update({ status: newStatus, updatedAt: new Date() });
     return { id: incidentId, status: newStatus };
+}
+
+// Undo the public-profile effects of a confirmation (paired with every
+// confirmed -> non-confirmed transition so counts cannot drift).
+async function rollbackConfirmation(incident) {
+    const work = [];
+
+    if (incident.driverId) {
+        work.push(incrementDriverIncidentCount(incident.driverId, -1));
+    }
+    if (incident.vehicleId) {
+        work.push(incrementVehicleIncidentCount(incident.vehicleId, -1));
+    }
+
+    await Promise.all(work);
+}
+
+// Admin confirmation: find-or-create the vehicle and driver, link them,
+// attach the incident to both and increment their incident counts exactly
+// once. Safe against duplicate confirmation — an already confirmed report
+// is checked for missing linkage and repaired instead of silently
+// returning, so legacy confirmations (status flipped without links) become
+// searchable again while fully linked ones stay a pure no-op.
+//
+// Handles reports where the driver name is missing (vehicle only),
+// where the vehicle is missing (driver only), and multiple drivers
+// linked to one vehicle.
+async function confirmReport(incidentId) {
+    const docRef = incidentsRef.doc(incidentId);
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+
+    const incident = doc.data();
+
+    if (incident.status === 'confirmed') {
+        return repairConfirmedIncident(incidentId, incident);
+    }
+
+    const { plate, vehicle, driver } = await resolveReportLinks(incident);
+
+    // 4. Flip the report to confirmed and increment counts exactly once.
+    //    The transaction re-checks the status, so a duplicate confirmation
+    //    that raced past the check above cannot double-increment.
+    const confirmedNow = await markIncidentConfirmed(incidentId, {
+        driverId: driver ? driver.id : null,
+        vehicleId: vehicle ? vehicle.id : null,
+        plate,
+    });
+
+    // The platform a rider reported is a real signal about the driver —
+    // surface it on the driver profile (case-insensitive, never duplicated).
+    if (confirmedNow && driver && incident.platform) {
+        await addDriverPlatformIfMissing(driver.id, incident.platform);
+    }
+
+    return {
+        id: incidentId,
+        status: 'confirmed',
+        driverId: driver ? driver.id : null,
+        vehicleId: vehicle ? vehicle.id : null,
+        alreadyConfirmed: !confirmedNow,
+    };
+}
+
+// Shared by confirmReport and repairConfirmedIncident.
+// 1. Vehicle — normalise the reported plate, then find or create. Creation
+//    is guarded by the same rule the report endpoint enforces, so a
+//    malformed plate can never mint a new vehicle document. A report whose
+//    plate fails the guard still confirms (driver side only) — it simply
+//    stays invisible to plate search until the plate is corrected.
+// 2. Driver — only when the report names one (missing names are handled
+//    safely: the incident is still attached to the vehicle).
+// 3. Link driver <-> vehicle (idempotent — never duplicates links).
+async function resolveReportLinks(incident) {
+    const plate = incident.plate ? normalisePlate(incident.plate) : null;
+    let vehicle = null;
+    if (plate && isValidPlate(plate)) {
+        vehicle = await findVehicleByPlate(plate);
+        if (!vehicle) {
+            vehicle = await createVehicle({
+                plateNumber: plate,
+                status: 'KNOWN',
+                driverIds: [],
+                verificationCount: 0,
+                incidentCount: 0,
+                createdAt: new Date(),
+            });
+        }
+    }
+
+    const driverName = (incident.driverName || '').trim();
+    let driver = null;
+    if (driverName) {
+        const nameKey = normaliseNameKey(driverName);
+        driver = await findDriverByNameKey(nameKey);
+        if (!driver) {
+            driver = await createDriver({
+                name: driverName,
+                nameKey,
+                incidentCount: 0,
+                vehicleIds: [],
+                platforms: [],
+                createdAt: new Date(),
+            });
+        }
+    }
+
+    if (driver && vehicle) {
+        await linkDriverVehiclePair(vehicle.id, driver.id);
+    }
+
+    return { plate, vehicle, driver };
+}
+
+// Self-heal for confirmations written before the linkage transaction
+// existed (status already 'confirmed' but driverId/vehicleId/confirmedAt
+// and counts never written). Resolves the links, attaches only the missing
+// sides and increments only those counts — idempotent by design, so a
+// fully linked confirmation changes nothing.
+async function repairConfirmedIncident(incidentId, incident) {
+    const { plate, vehicle, driver } = await resolveReportLinks(incident);
+
+    const repair = await linkConfirmedIncident(incidentId, {
+        driverId: driver ? driver.id : null,
+        vehicleId: vehicle ? vehicle.id : null,
+        plate,
+    });
+
+    if (repair.updated && repair.linkedDriver && driver && incident.platform) {
+        await addDriverPlatformIfMissing(driver.id, incident.platform);
+    }
+
+    return {
+        id: incidentId,
+        status: 'confirmed',
+        driverId: repair.linkedDriver ? driver.id : incident.driverId || null,
+        vehicleId: repair.linkedVehicle ? vehicle.id : incident.vehicleId || null,
+        alreadyConfirmed: true,
+        repaired: repair.updated,
+    };
 }
 
 export async function getTrends({ area, platform, severity } = {}) {

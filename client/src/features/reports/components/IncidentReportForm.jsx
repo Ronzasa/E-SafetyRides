@@ -6,6 +6,12 @@ const VEHICLE_TYPES = ['sedan', 'hatchback', 'suv', 'minibus', 'other'];
 const INCIDENT_TYPES = ['unsafe_driving', 'harassment', 'robbery', 'assault', 'other'];
 const SEVERITIES = ['low', 'medium', 'high'];
 
+// Same rule the server enforces on report plates and driver search uses —
+// anything accepted here is guaranteed to be searchable once confirmed.
+const PLATE_CHAR_REGEX = /[^A-Za-z0-9]/g;
+const PLATE_MAX_LENGTH = 8;
+const PLATE_FORMAT_REGEX = /^[A-Z0-9]{1,8}$/;
+
 function IncidentReportForm({ onSuccess }) {
   const [form, setForm] = useState({
     plate: '', driverName: '', platform: '', vehicleType: '',
@@ -16,13 +22,23 @@ function IncidentReportForm({ onSuccess }) {
   const [error, setError] = useState(null);
 
   function handleChange(e) {
+    if (e.target.name === 'plate') {
+      // Normalise while typing — uppercase, letters/digits only, max 8 chars.
+      const value = e.target.value.replace(PLATE_CHAR_REGEX, '').toUpperCase().slice(0, PLATE_MAX_LENGTH);
+      setForm({ ...form, plate: value });
+      return;
+    }
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+    if (!PLATE_FORMAT_REGEX.test(form.plate.trim())) {
+      setError('That plate number looks invalid — use up to 8 letters/digits, e.g. ABC123GP.');
+      return;
+    }
+    setSubmitting(true);
     try {
       const result = await createIncident(form);
       if (!result.success) {
@@ -53,7 +69,7 @@ function IncidentReportForm({ onSuccess }) {
 
         <div className="form-field">
           <label htmlFor="plate">Plate number</label>
-          <input id="plate" name="plate" value={form.plate} onChange={handleChange} required />
+          <input id="plate" name="plate" value={form.plate} onChange={handleChange} maxLength={PLATE_MAX_LENGTH} placeholder="e.g. ABC123GP" required />
         </div>
 
         <div className="form-field">

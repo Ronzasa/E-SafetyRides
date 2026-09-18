@@ -1,6 +1,5 @@
 import {
   findVehicleByPlate,
-  createVehicle,
   findDriversByIds,
   findDriverById,
   linkDriverToVehicle,
@@ -8,45 +7,98 @@ import {
   findVerificationsByVehicleId,
   findDriversByName,
   findVehiclesByIds,
-} from "./driverRespiratory.js";
+  findConfirmedIncidentsByDriverId,
+  findConfirmedIncidentsByVehicleId,
+} from "./driverRepository.js";
 
 import { normalisePlate } from "./driverValidation.js";
+
+// ─────────────────────────────────────────────────────
+// Public incident projection
+// Only confirmed incidents may leave the server through
+// public search, and reporter identity must never be
+// part of the payload (POPIA data minimisation).
+// ─────────────────────────────────────────────────────
+
+function toIsoString(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value.toDate === "function") return value.toDate().toISOString();
+  return null;
+}
+
+function toMillis(value) {
+  const iso = toIsoString(value);
+  const millis = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(millis) ? 0 : millis;
+}
+
+function toPublicIncident(incident) {
+  return {
+    id: incident.id,
+    type: incident.type,
+    severity: incident.severity,
+    description: incident.description,
+    area: incident.area,
+    platform: incident.platform,
+    vehicleType: incident.vehicleType,
+    evidenceUrls: incident.evidenceUrls || [],
+    corroborationCount: incident.corroborationCount || 0,
+    createdAt: toIsoString(incident.createdAt),
+  };
+}
+
+function toPublicIncidents(incidents) {
+  return [...incidents]
+    .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+    .map(toPublicIncident);
+}
 
 async function searchDriverByPlate(plateNumber) {
   const normalisedPlate = normalisePlate(plateNumber);
 
   const vehicle = await findVehicleByPlate(normalisedPlate);
 
-  if (vehicle) {
-    const drivers = await findDriversByIds(vehicle.driverIds || []);
-
-    const result = {
-      status: "KNOWN",
-      vehicle,
-      drivers,
+  // Unknown plates are reported as NEW without creating records — vehicles
+  // only enter the system once an admin confirms a report for them.
+  if (!vehicle) {
+    return {
+      status: "NEW",
+      vehicle: null,
+      drivers: [],
     };
-
-    if ((vehicle.driverIds || []).length > 1) {
-      result.multipleDriversWarning =
-        "This vehicle has been linked to more than one driver identity.";
-    }
-
-    return result;
   }
 
-  const newVehicle = await createVehicle({
-    plateNumber: normalisedPlate,
-    status: "NEW",
-    driverIds: [],
-    verificationCount: 0,
-    incidentCount: 0,
-  });
+  const [driverDocuments, vehicleIncidents] = await Promise.all([
+    findDriversByIds(vehicle.driverIds || []),
+    findConfirmedIncidentsByVehicleId(vehicle.id),
+  ]);
 
-  return {
-    status: "NEW",
-    vehicle: newVehicle,
-    drivers: [],
+  const drivers = await Promise.all(
+    driverDocuments.map(async (driver) => ({
+      ...driver,
+      incidents: toPublicIncidents(
+        await findConfirmedIncidentsByDriverId(driver.id),
+      ),
+    })),
+  );
+
+  const result = {
+    status: "KNOWN",
+    vehicle: {
+      ...vehicle,
+      incidents: toPublicIncidents(vehicleIncidents),
+    },
+    drivers,
   };
+
+  if ((vehicle.driverIds || []).length > 1) {
+    result.multipleDriversWarning =
+      "This vehicle has been linked to more than one driver identity.";
+  }
+
+  return result;
 }
 
 async function verifyDriverVehicle(plateNumber, driverId) {
@@ -155,8 +207,16 @@ async function searchDriverByName(nameQuery) {
 
   const driversWithVehicles = await Promise.all(
     drivers.map(async (driver) => {
-      const vehicles = await findVehiclesByIds(driver.vehicleIds || []);
-      return { ...driver, vehicles };
+      const [vehicles, incidents] = await Promise.all([
+        findVehiclesByIds(driver.vehicleIds || []),
+        findConfirmedIncidentsByDriverId(driver.id),
+      ]);
+
+      return {
+        ...driver,
+        vehicles,
+        incidents: toPublicIncidents(incidents),
+      };
     }),
   );
 

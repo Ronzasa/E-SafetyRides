@@ -1,4 +1,33 @@
 import { WarningBanner } from "./warningBanner";
+import { SafetySummary } from "./SafetySummary";
+
+function formatVehicleLine(vehicle) {
+  if (!vehicle) return "Unknown vehicle";
+
+  return [vehicle.make, vehicle.colour, vehicle.plateNumber]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+// A driver card must never read "clean" while the vehicle it is linked to
+// carries confirmed incidents (for example a report that named no driver).
+// Sum the linked vehicles' incident counts and point the reader to where
+// the details are, so "no incidents against this driver" is unambiguous.
+function vehicleIncidentNote(vehicles = []) {
+  const total = vehicles.reduce(
+    (sum, vehicle) => sum + (vehicle.incidentCount || 0),
+    0,
+  );
+
+  if (total === 0) return null;
+
+  const holder =
+    vehicles.length > 1 ? "Linked vehicles have" : "The linked vehicle has";
+
+  return `${holder} ${total} confirmed incident${
+    total === 1 ? "" : "s"
+  } — check the plate number for details.`;
+}
 
 export function DriverResultCard({ result }) {
   if (!result) return null;
@@ -35,23 +64,25 @@ export function DriverResultCard({ result }) {
             {driver.vehicles?.length > 0 ? (
               <p>
                 Vehicle(s):{" "}
-                {driver.vehicles.map((v) => v.plateNumber).join(", ")}
+                {driver.vehicles
+                  .map((vehicle) => formatVehicleLine(vehicle))
+                  .join(", ")}
               </p>
             ) : (
               <p>No vehicle currently linked.</p>
             )}
-            {driver.incidentCount > 0 && (
-              <WarningBanner
-                message={`This driver has ${driver.incidentCount} prior reported incident${driver.incidentCount > 1 ? "s" : ""}.`}
-              />
-            )}
+            <SafetySummary
+              incidents={driver.incidents}
+              subject="driver"
+              contextNote={vehicleIncidentNote(driver.vehicles)}
+            />
           </div>
         ))}
       </div>
     );
   }
 
-  // Plate search results (unchanged from before)
+  // Plate search results
   if (result.status === "NEW") {
     return (
       <div className="result-card result-new">
@@ -61,10 +92,17 @@ export function DriverResultCard({ result }) {
     );
   }
 
+  const vehicleIncidents = result.vehicle?.incidents || [];
+
   if (!result.drivers || result.drivers.length === 0) {
     return (
-      <div className="result-card result-unknown">
-        <p>Vehicle found, but no driver is linked to it yet.</p>
+      <div className="result-card result-known">
+        <h2 className="profile-heading">Vehicle Safety Profile</h2>
+        <p className="vehicle-summary">
+          Vehicle: {formatVehicleLine(result.vehicle)}
+        </p>
+        <p>No driver is currently linked to this vehicle.</p>
+        <SafetySummary incidents={vehicleIncidents} subject="vehicle" />
       </div>
     );
   }
@@ -78,9 +116,17 @@ export function DriverResultCard({ result }) {
       )}
 
       <p className="vehicle-summary">
-        {result.vehicle.make} · {result.vehicle.colour} ·{" "}
-        {result.vehicle.plateNumber}
+        Vehicle: {formatVehicleLine(result.vehicle)}
       </p>
+
+      <p className="verification-count">
+        Vehicle verified {result.vehicle.verificationCount || 0} time
+        {(result.vehicle.verificationCount || 0) === 1 ? "" : "s"}
+      </p>
+
+      {vehicleIncidents.length > 0 && (
+        <SafetySummary incidents={vehicleIncidents} subject="vehicle" />
+      )}
 
       {result.drivers.map((driver) => (
         <div key={driver.id} className="driver-info">
@@ -100,27 +146,17 @@ export function DriverResultCard({ result }) {
             </p>
           )}
 
-          <p className="verification-count">
-            Verified {result.vehicle.verificationCount || 0} time
-            {(result.vehicle.verificationCount || 0) === 1 ? "" : "s"}
-          </p>
-
-          {driver.incidentCount > 0 ? (
-            <>
-              <WarningBanner
-                message={`This driver has ${driver.incidentCount} prior reported incident${driver.incidentCount > 1 ? "s" : ""}.`}
-              />
-              {driver.misconductHistory?.length > 0 && (
-                <ul className="misconduct-list">
-                  {driver.misconductHistory.map((entry, i) => (
-                    <li key={i}>{entry}</li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : (
-            <div className="safe-badge">✅ No incidents on record</div>
-          )}
+          <SafetySummary
+            incidents={driver.incidents}
+            subject="driver"
+            contextNote={
+              vehicleIncidents.length > 0
+                ? `The linked vehicle has ${vehicleIncidents.length} confirmed incident${
+                    vehicleIncidents.length === 1 ? "" : "s"
+                  } — see the vehicle section above.`
+                : null
+            }
+          />
         </div>
       ))}
     </div>

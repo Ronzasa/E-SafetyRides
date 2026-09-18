@@ -1,5 +1,6 @@
 import { WarningBanner } from "./warningBanner";
 import { SafetySummary } from "./SafetySummary";
+import { IdentityConfirmControl } from "./IdentityConfirmControl";
 
 function formatVehicleLine(vehicle) {
   if (!vehicle) return "Unknown vehicle";
@@ -29,7 +30,7 @@ function vehicleIncidentNote(vehicles = []) {
   } — check the plate number for details.`;
 }
 
-export function DriverResultCard({ result }) {
+export function DriverResultCard({ result, showToast }) {
   if (!result) return null;
 
   // Name search results
@@ -45,39 +46,52 @@ export function DriverResultCard({ result }) {
     return (
       <div className="result-card result-known">
         <h2 className="profile-heading">Search Results</h2>
-        {result.drivers.map((driver) => (
-          <div key={driver.id} className="driver-info name-result-item">
-            <img
-              src={driver.photoUrl || "/default-avatar.png"}
-              alt={driver.name}
-              className="driver-photo"
-              onError={(e) => {
-                e.target.src = "/default-avatar.png";
-              }}
-            />
-            <h3>{driver.name}</h3>
-            {driver.platforms?.length > 0 && (
-              <p className="platform-tag">
-                Platform: {driver.platforms.join(", ")}
-              </p>
-            )}
-            {driver.vehicles?.length > 0 ? (
-              <p>
-                Vehicle(s):{" "}
-                {driver.vehicles
-                  .map((vehicle) => formatVehicleLine(vehicle))
-                  .join(", ")}
-              </p>
-            ) : (
-              <p>No vehicle currently linked.</p>
-            )}
-            <SafetySummary
-              incidents={driver.incidents}
-              subject="driver"
-              contextNote={vehicleIncidentNote(driver.vehicles)}
-            />
-          </div>
-        ))}
+        {result.drivers.map((driver) => {
+          const plate = driver.vehicles?.[0]?.plateNumber;
+          return (
+            <div key={driver.id} className="driver-info name-result-item">
+              <img
+                src={driver.photoUrl || "/default-avatar.png"}
+                alt={driver.name}
+                className="driver-photo"
+                onError={(e) => {
+                  e.target.src = "/default-avatar.png";
+                }}
+              />
+              <h3>{driver.name}</h3>
+              {driver.platforms?.length > 0 && (
+                <p className="platform-tag">
+                  Platform: {driver.platforms.join(", ")}
+                </p>
+              )}
+              {driver.vehicles?.length > 0 ? (
+                <p>
+                  Vehicle(s):{" "}
+                  {driver.vehicles
+                    .map((vehicle) => formatVehicleLine(vehicle))
+                    .join(", ")}
+                </p>
+              ) : (
+                <p>No vehicle currently linked.</p>
+              )}
+              <SafetySummary
+                incidents={driver.incidents}
+                subject="driver"
+                contextNote={vehicleIncidentNote(driver.vehicles)}
+              />
+              {plate && (
+                <IdentityConfirmControl
+                  target={{
+                    driverName: driver.name,
+                    plate,
+                    platform: driver.platforms?.[0],
+                  }}
+                  showToast={showToast}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -157,6 +171,17 @@ export function DriverResultCard({ result }) {
                 : null
             }
           />
+
+          {result.vehicle?.plateNumber && (
+            <IdentityConfirmControl
+              target={{
+                driverName: driver.name,
+                plate: result.vehicle.plateNumber,
+                platform: driver.platforms?.[0],
+              }}
+              showToast={showToast}
+            />
+          )}
         </div>
       ))}
     </div>

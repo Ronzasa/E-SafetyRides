@@ -1,9 +1,11 @@
 import { useDriverSearch } from "../driverSearchHooks";
 import { PlateSearchForm } from "../components/plateSearchForm";
 import { DriverResultCard } from "../components/driverResultCard";
+import { Toast } from "../components/Toast";
 
 export default function DriverSearchPage() {
-  const { result, loading, error, search } = useDriverSearch();
+  const { result, loading, error, search, toast, showToast, dismissToast } =
+    useDriverSearch();
 
   return (
     <div className="driver-search-page">
@@ -17,7 +19,9 @@ export default function DriverSearchPage() {
 
       {error && <div className="error-message">{error}</div>}
 
-      <DriverResultCard result={result} />
+      <DriverResultCard result={result} showToast={showToast} />
+
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

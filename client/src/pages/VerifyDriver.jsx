@@ -12,18 +12,36 @@ const RESULT_COPY = {
   no_record: { label: 'No record', tone: 'neutral', heading: 'No verified record found' },
 };
 
+function normalisePlate(value) {
+  return value.trim().toUpperCase().replace(/[\s-]/g, '');
+}
+
 export default function VerifyDriver() {
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(STEPS.PLATE);
   const [plate, setPlate] = useState(searchParams.get('plate') || '');
+  const [vehicleId, setVehicleId] = useState(searchParams.get('vehicleId') || '');
+  const [driverId, setDriverId] = useState(searchParams.get('driverId') || '');
   const [consentChecked, setConsentChecked] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const hasVerificationTarget = Boolean(vehicleId && driverId);
 
   function handlePlateSubmit(e) {
     e.preventDefault();
-    if (!plate.trim()) return;
+    const normalisedPlate = normalisePlate(plate);
+
+    if (!/^[A-Z0-9]{1,8}$/.test(normalisedPlate)) {
+      setError('Enter a valid vehicle plate number.');
+      return;
+    }
+    if (!hasVerificationTarget) {
+      setError('Search for the driver first, then select Yes, Verify from the matching result.');
+      return;
+    }
+
+    setPlate(normalisedPlate);
     setError('');
     setStep(STEPS.CONSENT);
   }
@@ -38,14 +56,18 @@ export default function VerifyDriver() {
     setError('');
     try {
       const data = await api.post('/verification/scan', {
-        plate: plate.trim(),
+        plate: normalisePlate(plate),
+        vehicleId,
+        driverId,
         descriptor,
         consent: true,
       });
       setResult(data);
       setStep(STEPS.RESULT);
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -53,6 +75,8 @@ export default function VerifyDriver() {
 
   function handleScanAnother() {
     setPlate('');
+    setVehicleId('');
+    setDriverId('');
     setConsentChecked(false);
     setResult(null);
     setError('');
@@ -76,6 +100,9 @@ export default function VerifyDriver() {
             <div className="verify-icon"><AppIcon name="verify" size={24} /></div>
             <h2>Which vehicle are you checking?</h2>
             <p>Start with the plate number on the vehicle you are about to enter.</p>
+            {hasVerificationTarget && (
+              <p className="verify-privacy-note">This plate is linked to the driver you selected in search.</p>
+            )}
             <input
               id="plate"
               className="full-input"
@@ -83,6 +110,7 @@ export default function VerifyDriver() {
               onChange={(e) => setPlate(e.target.value)}
               placeholder="e.g. CA 123-456"
               required
+              readOnly={hasVerificationTarget}
               autoFocus
             />
             <button type="submit" className="app-button primary full-button">Continue</button>
@@ -196,8 +224,10 @@ function CameraStep({ submitting, onCaptured, onBack }) {
         setCaptureError("No face detected. Line up the driver's face in frame and try again.");
         return;
       }
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      onCaptured(descriptor);
+      const completed = await onCaptured(descriptor);
+      if (completed) {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+      }
     } catch {
       setCaptureError('Something went wrong reading the face. Please try again.');
     } finally {

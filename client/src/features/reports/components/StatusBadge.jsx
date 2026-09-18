@@ -1,4 +1,4 @@
-export const STATUS_LABEL = {
+const STATUS_LABEL = {
   pending: 'Pending review',
   under_review: 'Under review',
   confirmed: 'Confirmed',

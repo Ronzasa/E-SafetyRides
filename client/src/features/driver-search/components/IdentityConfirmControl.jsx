@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createIncident } from "../../reports/reportsApi";
 
 // Sits inline on a driver card. Idle by default (a small button) so it
@@ -8,6 +9,7 @@ import { createIncident } from "../../reports/reportsApi";
 // stage: "idle" -> "asking" -> ("done" | "submitting" -> "done")
 export function IdentityConfirmControl({ target, showToast }) {
   const [stage, setStage] = useState("idle");
+  const navigate = useNavigate();
 
   if (!target) return null;
 
@@ -16,19 +18,17 @@ export function IdentityConfirmControl({ target, showToast }) {
   }
 
   function handleYes() {
-    showToast("Enjoy your ride — stay safe out there! 🚗", "success");
-    setStage("done");
+    navigate(`/verify-driver?plate=${encodeURIComponent(target.plate)}`);
   }
 
   async function handleNo() {
     setStage("submitting");
+
     try {
       const outcome = await createIncident({
         plate: target.plate,
         driverName: target.driverName,
         platform: target.platform || "other",
-        // Not available anywhere the search result can see — flagged as
-        // "other" rather than guessed.
         vehicleType: "other",
         type: "other",
         severity: "medium",
@@ -68,6 +68,7 @@ export function IdentityConfirmControl({ target, showToast }) {
     return (
       <div className="identity-confirm-prompt">
         <p>Does this match the driver who actually picked you up?</p>
+
         <div className="identity-confirm-actions">
           <button
             type="button"
@@ -76,6 +77,7 @@ export function IdentityConfirmControl({ target, showToast }) {
           >
             No, doesn't match
           </button>
+
           <button
             type="button"
             className="btn-primary btn-sm"

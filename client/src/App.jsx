@@ -13,6 +13,7 @@ import AdminReportQueue from "./pages/AdminReportQueue";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import DriverSearchPage from "./features/driver-search/pages/DriverSearchPage";
+import Home from "./pages/Home";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <BrowserRouter>
         <Navbar />
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

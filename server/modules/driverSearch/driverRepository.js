@@ -1,5 +1,6 @@
 import { db } from "../../config/firebase.js";
 import { FieldValue } from "firebase-admin/firestore";
+import { normaliseNameKey } from "./driverValidation.js";
 
 // =====================================================
 // Vehicles
@@ -88,6 +89,10 @@ async function findDriversByIds(driverIds) {
 }
 
 // Match a driver by the stable lowercase name key stored on the record.
+// Falls back to a normalised-name scan so driver records created before the
+// nameKey field existed (hand-seeded data) are never duplicated by an admin
+// confirmation; the fallback also self-heals the stored key so the next
+// lookup can use the fast path.
 async function findDriverByNameKey(nameKey) {
   const snapshot = await db
     .collection("drivers")
@@ -95,15 +100,42 @@ async function findDriverByNameKey(nameKey) {
     .limit(1)
     .get();
 
-  if (snapshot.empty) {
+  if (!snapshot.empty) {
+    const document = snapshot.docs[0];
+
+    return {
+      id: document.id,
+      ...document.data(),
+    };
+  }
+
+  const allDrivers = await db.collection("drivers").get();
+
+  const match = allDrivers.docs.find((document) => {
+    const data = document.data();
+    return (
+      typeof data.name === "string" && normaliseNameKey(data.name) === nameKey
+    );
+  });
+
+  if (!match) {
     return null;
   }
 
-  const document = snapshot.docs[0];
+  // Best-effort backfill so the next lookup uses the fast path.
+  try {
+    await match.ref.update({ nameKey });
+  } catch (error) {
+    console.warn(
+      `Could not backfill nameKey on driver ${match.id}:`,
+      error.message,
+    );
+  }
 
   return {
-    id: document.id,
-    ...document.data(),
+    id: match.id,
+    ...match.data(),
+    nameKey,
   };
 }
 

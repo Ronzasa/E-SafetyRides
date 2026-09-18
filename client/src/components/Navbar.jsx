@@ -7,9 +7,9 @@ export function Navbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Hide navbar entirely on auth pages
-  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
-  if (!user || authRoutes.includes(location.pathname)) return null;
+  // The landing page and auth pages provide their own navigation.
+  const routesWithoutAppNavbar = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+  if (!user || routesWithoutAppNavbar.includes(location.pathname)) return null;
 
   const isActive = (path) => location.pathname === path;
 

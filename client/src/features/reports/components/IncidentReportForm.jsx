@@ -6,11 +6,24 @@ const VEHICLE_TYPES = ['sedan', 'hatchback', 'suv', 'minibus', 'other'];
 const INCIDENT_TYPES = ['unsafe_driving', 'harassment', 'robbery', 'assault', 'other'];
 const SEVERITIES = ['low', 'medium', 'high'];
 
-// Same rule the server enforces on report plates and driver search uses —
-// anything accepted here is guaranteed to be searchable once confirmed.
+// New reports require the full 8-character plate (all caps, letters/digits
+// only). The server enforces the same rule, and driver search accepts 1-8,
+// so anything accepted here is guaranteed to be searchable once confirmed.
 const PLATE_CHAR_REGEX = /[^A-Za-z0-9]/g;
 const PLATE_MAX_LENGTH = 8;
-const PLATE_FORMAT_REGEX = /^[A-Z0-9]{1,8}$/;
+const PLATE_FORMAT_REGEX = /^[A-Z0-9]{8}$/;
+
+// Every compulsory field on the form, paired with the label used in the
+// error message when submission is attempted with fields still empty.
+const REQUIRED_FIELDS = [
+  ['plate', 'plate number'],
+  ['platform', 'platform'],
+  ['vehicleType', 'vehicle type'],
+  ['type', 'incident type'],
+  ['severity', 'severity'],
+  ['area', 'area'],
+  ['description', 'description'],
+];
 
 function IncidentReportForm({ onSuccess }) {
   const [form, setForm] = useState({
@@ -34,8 +47,16 @@ function IncidentReportForm({ onSuccess }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    // Belt-and-braces guard: the browser's `required` attributes normally
+    // block this first, but submission must never go through with any
+    // compulsory field missing.
+    const missing = REQUIRED_FIELDS.filter(([field]) => !String(form[field] ?? '').trim());
+    if (missing.length > 0) {
+      setError(`Please fill in all compulsory fields: ${missing.map(([, label]) => label).join(', ')}.`);
+      return;
+    }
     if (!PLATE_FORMAT_REGEX.test(form.plate.trim())) {
-      setError('That plate number looks invalid — use up to 8 letters/digits, e.g. ABC123GP.');
+      setError('Plate numbers must be exactly 8 letters/digits (all caps), e.g. ABC123GP.');
       return;
     }
     setSubmitting(true);

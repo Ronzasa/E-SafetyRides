@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import DriverSearchPage from "./features/driver-search/pages/DriverSearchPage";
 import Home from "./pages/Home";
+import VerifyDriver from "./pages/VerifyDriver";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-driver" element={<VerifyDriver />} />
           <Route
             path="/report"
             element={

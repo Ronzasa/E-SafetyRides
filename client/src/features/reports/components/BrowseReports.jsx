@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getIncidents } from '../reportsApi';
 import IncidentCard from './IncidentCard';
+import GoBackButton from '../../../components/GoBackButton';
 
 const PLATFORMS = ['uber', 'bolt', 'indrive', 'other'];
 const SEVERITIES = ['low', 'medium', 'high'];
@@ -40,6 +41,7 @@ function BrowseReports() {
           <h1>Browse reports</h1>
           <p className="page-subtitle">Safety signals from other passengers — not confirmed accusations.</p>
         </div>
+        <GoBackButton />
       </header>
 
       <div className="filter-bar">

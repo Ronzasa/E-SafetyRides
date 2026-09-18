@@ -35,7 +35,7 @@ export default function Home() {
     <div className="home">
       {!user && (
         <header className="home-topbar">
-          <span className="navbar-brand">SafeRide<span>SA</span></span>
+          <span className="navbar-brand">E-Safety<span>Rides</span></span>
           <div className="home-topbar-actions">
             <Link to="/login" className="btn-secondary">Log in</Link>
             <Link to="/register" className="btn-primary">Register</Link>
@@ -49,7 +49,7 @@ export default function Home() {
           <div className="home-hero-copy">
             <h1>Get in with confidence, every ride.</h1>
             <p className="home-hero-sub">
-              SafeRide SA checks the plate and the person against what your driver-hailing
+              E-SafetyRides checks the plate and the person against what your driver-hailing
               app told you &mdash; then shows you what other passengers have actually experienced.
             </p>
             <div className="home-hero-actions">
@@ -98,7 +98,7 @@ export default function Home() {
       </section>
 
       <footer className="home-footer">
-        SafeRide SA &mdash; an independent, cross-platform passenger safety project.
+        E-SafetyRides &mdash; an independent, cross-platform passenger safety project.
       </footer>
     </div>
   );

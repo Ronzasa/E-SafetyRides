@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import GoBackButton from '../components/GoBackButton';
 
 const TABS = ['pending', 'under_review', 'confirmed', 'rejected'];
 
@@ -87,6 +88,7 @@ export default function AdminReportQueue() {
           <h1>Report review queue</h1>
           <p className="page-subtitle">Moderate incoming safety reports</p>
         </div>
+        <GoBackButton />
       </header>
 
       <div className="tab-bar">

@@ -47,6 +47,7 @@ export function Navbar() {
             <Link to="/my-reports" className={isActive("/my-reports") ? "navbar-link-active" : ""} onClick={closeMenu}>My reports</Link>
             <Link to="/browse" className={isActive("/browse") ? "navbar-link-active" : ""} onClick={closeMenu}>Browse</Link>
             <Link to="/driver-search" className={isActive("/driver-search") ? "navbar-link-active" : ""} onClick={closeMenu}>Driver Search</Link>
+            <Link to="/verify-driver" className={isActive("verify-driver") ? "navbar-link-active" : ""} onClick={closeMenu}>Verify Driver</Link>
           </>
         )}
 

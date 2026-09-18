@@ -224,7 +224,8 @@ async function main() {
           id: driver.id,
           name: driver.name,
           nameKey,
-          renameFrom: driver.nameFieldKey === "name" ? null : driver.nameFieldKey,
+          renameFrom:
+            driver.nameFieldKey === "name" ? null : driver.nameFieldKey,
         });
       }
       continue;
@@ -278,12 +279,16 @@ async function main() {
       vehiclesToRelink,
       vehicleIds: unionArrays(
         readField(survivor.data, "vehicleIds").value,
-        ...duplicates.map((driver) => readField(driver.data, "vehicleIds").value),
+        ...duplicates.map(
+          (driver) => readField(driver.data, "vehicleIds").value,
+        ),
         Array.from(vehiclesToRelink.keys()),
       ),
       platforms: unionArrays(
         readField(survivor.data, "platforms").value,
-        ...duplicates.map((driver) => readField(driver.data, "platforms").value),
+        ...duplicates.map(
+          (driver) => readField(driver.data, "platforms").value,
+        ),
       ),
     });
   }
@@ -422,9 +427,7 @@ async function main() {
   const addPlatformTo = (map, key, platform) => {
     if (!map.has(key)) map.set(key, []);
     const list = map.get(key);
-    if (
-      !list.some((entry) => entry.toLowerCase() === platform.toLowerCase())
-    ) {
+    if (!list.some((entry) => entry.toLowerCase() === platform.toLowerCase())) {
       list.push(platform);
     }
   };
@@ -492,7 +495,9 @@ async function main() {
     const rename = item.renameFrom
       ? ` (renames field "${item.renameFrom}" -> "name")`
       : "";
-    console.log(`   ${item.id} "${item.name}": nameKey -> "${item.nameKey}"${rename}`);
+    console.log(
+      `   ${item.id} "${item.name}": nameKey -> "${item.nameKey}"${rename}`,
+    );
   }
 
   console.log(`\n2. Duplicate driver merges: ${merges.length}`);
@@ -511,16 +516,22 @@ async function main() {
     );
   }
 
-  console.log(`\n3. Confirmed incidents missing linkage: ${legacyLinks.length}`);
+  console.log(
+    `\n3. Confirmed incidents missing linkage: ${legacyLinks.length}`,
+  );
   for (const plan of legacyLinks) {
     const incident = incidents.find((item) => item.id === plan.incidentId);
     const actions = [];
     if (plan.driverId) actions.push(`driver=${plan.driverId}`);
-    if (plan.createDriver) actions.push(`create driver "${plan.createDriver.name}"`);
+    if (plan.createDriver)
+      actions.push(`create driver "${plan.createDriver.name}"`);
     if (plan.vehicleId) actions.push(`vehicle=${plan.vehicleId}`);
-    if (plan.createVehicle) actions.push(`create vehicle "${plan.createVehicle.plate}"`);
+    if (plan.createVehicle)
+      actions.push(`create vehicle "${plan.createVehicle.plate}"`);
     if (plan.skippedVehiclePlate)
-      actions.push(`SKIP invalid plate "${plan.skippedVehiclePlate}" (manual review)`);
+      actions.push(
+        `SKIP invalid plate "${plan.skippedVehiclePlate}" (manual review)`,
+      );
     console.log(
       `   ${plan.incidentId} ("${incident.data.driverName ?? "no driver name"}", plate ${incident.data.plate}): ${actions.join(", ")}`,
     );
@@ -567,11 +578,15 @@ async function main() {
     }
   }
   for (const [nameKey, count] of newDriverCounts) {
-    console.log(`   new driver "${nameKey}" created with incidentCount ${count}`);
+    console.log(
+      `   new driver "${nameKey}" created with incidentCount ${count}`,
+    );
     printedCounts = true;
   }
   for (const [plate, count] of newVehicleCounts) {
-    console.log(`   new vehicle "${plate}" created with incidentCount ${count}`);
+    console.log(
+      `   new vehicle "${plate}" created with incidentCount ${count}`,
+    );
     printedCounts = true;
   }
   if (!printedCounts) {
@@ -731,7 +746,9 @@ async function main() {
     for (const key of fix.keysToDelete) update[key] = FieldValue.delete();
     await db.collection("drivers").doc(driverId).update(update);
     platformUpdates += 1;
-    console.log(`   Updated platforms for ${driverId} "${fix.name || fix.nameKey}".`);
+    console.log(
+      `   Updated platforms for ${driverId} "${fix.name || fix.nameKey}".`,
+    );
   }
   console.log(`   Applied ${platformUpdates} platform fix(es).`);
 

@@ -19,6 +19,9 @@ export function Navbar() {
     '/browse',
     '/driver-search',
     '/verify-driver',
+    '/admin/reports',
+    '/admin/trends',
+    '/admin/users',
   ];
   if (!user || routesWithoutAppNavbar.includes(location.pathname)) return null;
 

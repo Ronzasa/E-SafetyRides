@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react';
+import { StatusPill } from '../../../components/SafetyAppShell';
 import { addCorroboration, getCorroborations } from '../reportsApi';
-import StatusBadge from './StatusBadge';
+
+function formatType(type) {
+  return String(type || 'Safety report').replace(/_/g, ' ');
+}
+
+function formatDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function severityTone(severity) {
+  if (severity === 'high') return 'red';
+  if (severity === 'medium') return 'amber';
+  return 'green';
+}
 
 function IncidentCard({ incident }) {
   const [corroborations, setCorroborations] = useState([]);
@@ -30,19 +47,28 @@ function IncidentCard({ incident }) {
     if (refreshed.success) setCorroborations(refreshed.corroborations);
   }
 
+  const submittedDate = formatDate(incident.createdAt || incident.created_at);
+
   return (
-    <div className="card report-card">
-      <div className="report-card-top">
+    <article className="browse-report">
+      <div className="report-heading">
         <div>
-          <p className="report-plate">{incident.plate}</p>
-          <p className="report-meta">
-            {incident.platform} · {incident.type.replace('_', ' ')} · {incident.area}
-          </p>
+          <span className="plate-label">{incident.plate || 'PLATE NOT RECORDED'}</span>
+          <h2>{formatType(incident.type)}</h2>
         </div>
-        <StatusBadge status={incident.status} />
+        <StatusPill tone={severityTone(incident.severity)}>
+          {incident.severity ? `${incident.severity} severity` : 'Safety signal'}
+        </StatusPill>
       </div>
 
-      <p className="report-description">{incident.description}</p>
+      <p className="report-copy">{incident.description}</p>
+
+      <div className="report-footer">
+        {incident.area && <span>{incident.area}</span>}
+        {incident.platform && <span>{incident.platform}</span>}
+        {submittedDate && <span>{submittedDate}</span>}
+        <span className="moderated">Moderated</span>
+      </div>
 
       <div className="corroboration-divider">
         <p className="text-muted-sm">
@@ -50,17 +76,17 @@ function IncidentCard({ incident }) {
             ? 'No one else has reported a similar experience yet.'
             : `${corroborations.length} passenger${corroborations.length > 1 ? 's have' : ' has'} reported something similar.`}
         </p>
-        {corroborations.map((c) => c.note && (
-          <p key={c.id} className="corroboration-note">{c.note}</p>
+        {corroborations.map((corroboration) => corroboration.note && (
+          <p key={corroboration.id} className="corroboration-note">{corroboration.note}</p>
         ))}
       </div>
 
       {error && <div className="auth-error">{error}</div>}
 
       {corroborated ? (
-        <p className="text-muted-sm">Thanks — your report has been added.</p>
+        <p className="corroboration-success">Thanks — your report has been added.</p>
       ) : (
-        <div className="form-field" style={{ marginTop: '0.75rem' }}>
+        <div className="corroboration-form">
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -69,16 +95,15 @@ function IncidentCard({ incident }) {
           />
           <button
             type="button"
-            className="btn-secondary"
+            className="app-button ghost"
             onClick={handleCorroborate}
             disabled={submitting}
-            style={{ marginTop: '0.5rem' }}
           >
             {submitting ? 'Submitting...' : "I've had a similar experience"}
           </button>
         </div>
       )}
-    </div>
+    </article>
   );
 }
 

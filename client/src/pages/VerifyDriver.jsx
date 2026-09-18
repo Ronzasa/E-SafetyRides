@@ -1,20 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AppIcon, PageIntro, SafetyAppShell, StatusPill } from '../components/SafetyAppShell';
 import { api } from '../lib/api';
 import { loadFaceModels, getFaceDescriptor } from '../lib/faceApi';
 
 const STEPS = { PLATE: 'plate', CONSENT: 'consent', CAMERA: 'camera', RESULT: 'result' };
 
 const RESULT_COPY = {
-  match: { label: 'Match', badgeClass: 'badge-success' },
-  mismatch: { label: 'Mismatch', badgeClass: 'badge-danger' },
-  no_record: { label: 'No record', badgeClass: 'badge-neutral' },
+  match: { label: 'Match', tone: 'green', heading: 'Identity matches' },
+  mismatch: { label: 'Mismatch', tone: 'red', heading: 'Identity does not match' },
+  no_record: { label: 'No record', tone: 'neutral', heading: 'No verified record found' },
 };
 
 export default function VerifyDriver() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
   const [step, setStep] = useState(STEPS.PLATE);
   const [plate, setPlate] = useState(searchParams.get('plate') || '');
   const [consentChecked, setConsentChecked] = useState(false);
@@ -61,92 +60,91 @@ export default function VerifyDriver() {
   }
 
   return (
-    <div className="page-container">
-      <header className="page-header">
-        <div>
-          <h1>Verify driver identity</h1>
-          <p className="page-subtitle">
-            Confirm the person behind the wheel matches this vehicle's record.
-          </p>
-        </div>
-      </header>
+    <SafetyAppShell>
+      <div className="app-content narrow-content">
+        <PageIntro
+          eyebrow="Identity check"
+          title="Verify a driver"
+          description="Confirm the person behind the wheel matches the vehicle's public record."
+        />
 
-      {error && <div className="auth-error">{error}</div>}
+        <VerificationStepper step={step} />
+        {error && <div className="auth-error">{error}</div>}
 
-      {step === STEPS.PLATE && (
-        <form className="card" onSubmit={handlePlateSubmit} style={{ maxWidth: 420 }}>
-          <label htmlFor="plate">Vehicle plate</label>
-          <input
-            id="plate"
-            value={plate}
-            onChange={(e) => setPlate(e.target.value)}
-            placeholder="e.g. CA 123-456"
-            required
-            autoFocus
-            style={{
-              width: '100%', marginTop: '0.35rem', marginBottom: '1rem',
-              padding: '0.7rem 0.85rem', border: '1.5px solid var(--color-border)',
-              borderRadius: 8, fontFamily: 'var(--font-body)', fontSize: '1rem',
-            }}
+        {step === STEPS.PLATE && (
+          <form className="verify-card" onSubmit={handlePlateSubmit}>
+            <div className="verify-icon"><AppIcon name="verify" size={24} /></div>
+            <h2>Which vehicle are you checking?</h2>
+            <p>Start with the plate number on the vehicle you are about to enter.</p>
+            <input
+              id="plate"
+              className="full-input"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value)}
+              placeholder="e.g. CA 123-456"
+              required
+              autoFocus
+            />
+            <button type="submit" className="app-button primary full-button">Continue</button>
+          </form>
+        )}
+
+        {step === STEPS.CONSENT && (
+          <ConsentStep
+            plate={plate}
+            checked={consentChecked}
+            onCheckedChange={setConsentChecked}
+            onBack={() => setStep(STEPS.PLATE)}
+            onContinue={handleConsentContinue}
           />
-          <button type="submit" className="btn-primary">Continue</button>
-        </form>
-      )}
+        )}
 
-      {step === STEPS.CONSENT && (
-        <ConsentStep
-          plate={plate}
-          checked={consentChecked}
-          onCheckedChange={setConsentChecked}
-          onBack={() => setStep(STEPS.PLATE)}
-          onContinue={handleConsentContinue}
-        />
-      )}
+        {step === STEPS.CAMERA && (
+          <CameraStep
+            submitting={submitting}
+            onCaptured={handleCaptured}
+            onBack={() => setStep(STEPS.CONSENT)}
+          />
+        )}
 
-      {step === STEPS.CAMERA && (
-        <CameraStep
-          submitting={submitting}
-          onCaptured={handleCaptured}
-          onBack={() => setStep(STEPS.CONSENT)}
-        />
-      )}
+        {step === STEPS.RESULT && result && (
+          <ResultStep plate={plate} result={result} onScanAnother={handleScanAnother} />
+        )}
+      </div>
+    </SafetyAppShell>
+  );
+}
 
-      {step === STEPS.RESULT && result && (
-        <ResultStep plate={plate} result={result} onScanAnother={handleScanAnother} />
-      )}
+function VerificationStepper({ step }) {
+  const secondStepDone = step === STEPS.CAMERA || step === STEPS.RESULT;
+  const thirdStepDone = step === STEPS.RESULT;
+
+  return (
+    <div className="stepper" aria-label="Verification progress">
+      <span className="done">1</span><i />
+      <span className={secondStepDone ? 'done' : ''}>2</span><i />
+      <span className={thirdStepDone ? 'done' : ''}>3</span>
     </div>
   );
 }
 
 function ConsentStep({ plate, checked, onCheckedChange, onBack, onContinue }) {
   return (
-    <div className="card" style={{ maxWidth: 480 }}>
-      <h2>Before we scan</h2>
+    <div className="verify-card">
+      <div className="verify-icon"><AppIcon name="shield" size={24} /></div>
+      <h2>Ask for consent first</h2>
       <p>
-        We'll capture a photo of the driver's face to check it against the plate{' '}
-        <strong>{plate.toUpperCase()}</strong>. The photo itself is never stored — only a
-        mathematical representation of the face is kept, and it's encrypted.
+        We will capture a photo of the driver&apos;s face to check it against plate <strong>{plate.toUpperCase()}</strong>.
+        The photo itself is never stored — only an encrypted mathematical representation is kept.
       </p>
-      <p className="report-meta">
-        This is treated as sensitive personal information under South African privacy law (POPIA).
-        The driver should be aware this scan is happening.
-      </p>
-
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', margin: '1.25rem 0' }}>
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onCheckedChange(e.target.checked)}
-          style={{ marginTop: '0.2rem' }}
-        />
+      <p className="verify-privacy-note">This is sensitive personal information under South African privacy law (POPIA). The driver should know this scan is happening.</p>
+      <label className="consent-line">
+        <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} />
         <span>I confirm the driver has been informed and I have consent to capture this scan.</span>
       </label>
-
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button type="button" className="btn-secondary" onClick={onBack}>Back</button>
-        <button type="button" className="btn-primary" disabled={!checked} onClick={onContinue}>
-          Continue
-        </button>
+      <div className="button-row">
+        <button type="button" className="app-button ghost" onClick={onBack}>Back</button>
+        <button type="button" className="app-button primary" disabled={!checked} onClick={onContinue}>Continue</button>
       </div>
     </div>
   );
@@ -171,12 +169,12 @@ function CameraStep({ submitting, onCaptured, onBack }) {
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
-      } catch (err) {
+      } catch {
         setCameraError('Could not access the camera. Please allow camera permission and try again.');
       }
     }
@@ -184,7 +182,7 @@ function CameraStep({ submitting, onCaptured, onBack }) {
     setup();
     return () => {
       cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -195,12 +193,12 @@ function CameraStep({ submitting, onCaptured, onBack }) {
     try {
       const descriptor = await getFaceDescriptor(videoRef.current);
       if (!descriptor) {
-        setCaptureError('No face detected. Line up the driver\'s face in frame and try again.');
+        setCaptureError("No face detected. Line up the driver's face in frame and try again.");
         return;
       }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
       onCaptured(descriptor);
-    } catch (err) {
+    } catch {
       setCaptureError('Something went wrong reading the face. Please try again.');
     } finally {
       setCapturing(false);
@@ -208,40 +206,29 @@ function CameraStep({ submitting, onCaptured, onBack }) {
   }
 
   return (
-    <div className="card" style={{ maxWidth: 480 }}>
-      <h2>Scan driver</h2>
-
+    <div className="verify-card">
       {cameraError && <div className="auth-error">{cameraError}</div>}
       {captureError && <div className="auth-error">{captureError}</div>}
-
-      <div style={{
-        background: 'var(--color-primary-dark)', borderRadius: 8, overflow: 'hidden',
-        aspectRatio: '4 / 3', marginBottom: '1rem', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        {!modelsReady && !cameraError && (
-          <span style={{ color: '#fff', fontSize: '0.9rem' }}>Loading camera…</span>
-        )}
+      <div className="camera-placeholder">
+        {!modelsReady && !cameraError && <span>Loading camera...</span>}
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: modelsReady ? 'block' : 'none' }}
+          className={modelsReady ? 'camera-feed' : 'camera-feed is-hidden'}
         />
       </div>
-
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button type="button" className="btn-secondary" onClick={onBack} disabled={submitting || capturing}>
-          Back
-        </button>
+      <StatusPill tone="neutral">Photo is not stored</StatusPill>
+      <div className="button-row verify-camera-actions">
+        <button type="button" className="app-button ghost" onClick={onBack} disabled={submitting || capturing}>Back</button>
         <button
           type="button"
-          className="btn-primary"
+          className="app-button primary"
           onClick={handleCapture}
-          disabled={!modelsReady || !!cameraError || capturing || submitting}
+          disabled={!modelsReady || Boolean(cameraError) || capturing || submitting}
         >
-          {capturing || submitting ? 'Checking…' : 'Capture & verify'}
+          {capturing || submitting ? 'Checking...' : 'Capture and verify'}
         </button>
       </div>
     </div>
@@ -252,18 +239,16 @@ function ResultStep({ plate, result, onScanAnother }) {
   const copy = RESULT_COPY[result.result] || RESULT_COPY.no_record;
 
   return (
-    <div className="card" style={{ maxWidth: 480 }}>
-      <div className="report-card-top">
-        <span className="report-plate">{plate.toUpperCase()}</span>
-        <span className={`badge ${copy.badgeClass}`}>{copy.label}</span>
-      </div>
-      <p style={{ marginTop: '1rem' }}>{result.message}</p>
+    <div className="verify-card result-verified">
+      <div className="verified-check"><AppIcon name="shield" size={28} /></div>
+      <span className="plate-label verify-result-plate">{plate.toUpperCase()}</span>
+      <StatusPill tone={copy.tone}>{copy.label}</StatusPill>
+      <h2>{copy.heading}</h2>
+      <p>{result.message}</p>
       {typeof result.confidence === 'number' && (
-        <p className="report-meta">Confidence: {(result.confidence * 100).toFixed(0)}%</p>
+        <p className="verify-privacy-note">Confidence: {(result.confidence * 100).toFixed(0)}%</p>
       )}
-      <button type="button" className="btn-primary" onClick={onScanAnother} style={{ marginTop: '0.5rem' }}>
-        Scan another plate
-      </button>
+      <button type="button" className="app-button ghost" onClick={onScanAnother}>Scan another plate</button>
     </div>
   );
 }

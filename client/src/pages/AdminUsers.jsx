@@ -1,5 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { AdminAppShell, AppIcon, PageIntro, StatusPill } from '../components/SafetyAppShell';
 import { api } from '../lib/api';
+
+function formatDate(value) {
+  if (!value) return '—';
+  const seconds = value.seconds ?? value._seconds;
+  const date = value.toDate ? value.toDate() : seconds ? new Date(seconds * 1000) : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function initials(name = '') {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'U';
+}
+
+function roleTone(role) {
+  return role === 'admin' ? 'amber' : 'blue';
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -9,101 +33,114 @@ export default function AdminUsers() {
 
   useEffect(() => {
     api.get('/admin/users')
-      .then((data) => setUsers(data.users))
+      .then((data) => setUsers(data.users || []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = users.filter((u) => {
-    const q = search.toLowerCase();
-    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
-  });
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return users;
+    return users.filter((user) => `${user.name || ''} ${user.email || ''}`.toLowerCase().includes(query));
+  }, [search, users]);
 
-  function formatDate(d) {
-    if (!d) return '—';
-    const date = d.toDate ? d.toDate() : new Date(d);
-    return date.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
+  const communityCount = users.filter((user) => user.role !== 'admin').length;
+  const adminCount = users.length - communityCount;
 
   return (
-    <div className="page-container">
-      <header className="page-header">
-        <div>
-          <h1>Users</h1>
-          <p className="page-subtitle">{users.length} registered user{users.length === 1 ? '' : 's'}</p>
-        </div>
-      </header>
+    <AdminAppShell>
+      <div className="app-content admin-content">
+        <PageIntro
+          eyebrow="Community access"
+          title="Users"
+          description="Review the registered community and the accounts with administrator access."
+          action={(
+            <span className="admin-header-stat">
+              <AppIcon name="users" size={16} /> {users.length} registered
+            </span>
+          )}
+        />
 
-      {error && <div className="auth-error">{error}</div>}
-      {loading && <p>Loading users...</p>}
+        {error && <div className="auth-error">{error}</div>}
+        {loading && <p className="workflow-loading">Loading users...</p>}
 
-      {!loading && (
-        <>
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.65rem 0.85rem',
-              border: '1.5px solid var(--color-border)',
-              borderRadius: '8px',
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.95rem',
-              marginBottom: '1.5rem',
-              background: 'var(--color-surface)',
-            }}
-          />
+        {!loading && (
+          <>
+            <section className="admin-user-summary" aria-label="User account summary">
+              <article>
+                <span>All accounts</span>
+                <strong>{users.length}</strong>
+                <small>Registered on E-SafetyRides</small>
+              </article>
+              <article>
+                <span>Passenger accounts</span>
+                <strong>{communityCount}</strong>
+                <small>Community safety participants</small>
+              </article>
+              <article>
+                <span>Administrators</span>
+                <strong>{adminCount}</strong>
+                <small>Accounts with moderation access</small>
+              </article>
+            </section>
 
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-primary-tint)' }}>
-                  <th style={thStyle}>Name</th>
-                  <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Role</th>
-                  <th style={thStyle}>Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
-                      {search ? 'No users match your search.' : 'No users yet.'}
-                    </td>
-                  </tr>
-                )}
-                {filtered.map((u) => (
-                  <tr key={u.uid} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={tdStyle}>{u.name}</td>
-                    <td style={tdStyle}>{u.email}</td>
-                    <td style={tdStyle}>
-                      <span className={`badge ${u.role === 'admin' ? 'badge-warning' : 'badge-neutral'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{formatDate(u.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </div>
+            <section className="app-card admin-users-card">
+              <div className="admin-users-card-header">
+                <div>
+                  <span className="section-kicker">Account directory</span>
+                  <h2>Registered users</h2>
+                  <p>Search by a member’s name or email address.</p>
+                </div>
+                <label className="admin-search-control">
+                  <AppIcon name="search" size={16} />
+                  <span className="sr-only">Search users</span>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search users..."
+                  />
+                </label>
+              </div>
+
+              <div className="admin-users-table-wrap">
+                <table className="admin-users-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Member</th>
+                      <th scope="col">Role</th>
+                      <th scope="col">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className="admin-users-empty">
+                          {search ? 'No users match your search.' : 'No users have registered yet.'}
+                        </td>
+                      </tr>
+                    ) : filteredUsers.map((user) => (
+                      <tr key={user.uid}>
+                        <td data-label="Member">
+                          <div className="admin-user-identity">
+                            <span className={`admin-user-avatar ${roleTone(user.role)}`}>{initials(user.name)}</span>
+                            <span>
+                              <strong>{user.name || 'Unnamed user'}</strong>
+                              <small>{user.email || 'No email available'}</small>
+                            </span>
+                          </div>
+                        </td>
+                        <td data-label="Role"><StatusPill tone={roleTone(user.role)}>{user.role || 'passenger'}</StatusPill></td>
+                        <td data-label="Joined" className="admin-user-date">{formatDate(user.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+      </div>
+    </AdminAppShell>
   );
 }
-
-const thStyle = {
-  textAlign: 'left',
-  padding: '0.75rem 1rem',
-  fontSize: '0.85rem',
-  fontWeight: 600,
-  color: 'var(--color-primary-dark)',
-};
-
-const tdStyle = {
-  padding: '0.75rem 1rem',
-  fontSize: '0.9rem',
-};

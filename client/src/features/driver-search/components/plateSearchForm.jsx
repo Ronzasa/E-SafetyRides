@@ -6,8 +6,10 @@ const NAME_CHAR_REGEX = /[^A-Za-z\s'-]/g;
 const PLATE_MAX_LENGTH = 8;
 const NAME_MAX_LENGTH = 50;
 
-// Loose SA plate shape: 2-3 letters, 1-4 digits, optional 1-3 letter province code
-const PLATE_FORMAT_REGEX = /^[A-Z]{2,3}[0-9]{1,4}[A-Z]{0,3}$/;
+// Must match the rule the server enforces on report plates (normalisePlate +
+// isValidPlate): 1-8 letters/digits after normalisation. A stricter shape
+// here would make plates accepted by the report form unsearchable in the UI.
+const PLATE_FORMAT_REGEX = /^[A-Z0-9]{1,8}$/;
 const NAME_FORMAT_REGEX = /^[A-Za-z]+([\s'-][A-Za-z]+)*$/;
 
 export function PlateSearchForm({ onSearch, loading }) {

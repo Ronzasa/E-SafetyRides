@@ -333,6 +333,79 @@ async function markIncidentConfirmed(
   });
 }
 
+// Repair path for confirmed incidents that never received their driver/vehicle
+// linkage (legacy confirmations, or confirmations written by an outdated
+// server build). Links only the sides that are missing and increments only
+// those counts, in the same transaction — a fully linked confirmation stays
+// a pure no-op and repairing can never double-count.
+async function linkConfirmedIncident(
+  incidentId,
+  { driverId = null, vehicleId = null, plate = null } = {},
+) {
+  const incidentRef = db.collection("incidents").doc(incidentId);
+
+  return db.runTransaction(async (transaction) => {
+    const incidentDoc = await transaction.get(incidentRef);
+
+    if (!incidentDoc.exists) {
+      return { updated: false, linkedDriver: false, linkedVehicle: false };
+    }
+
+    const incident = incidentDoc.data();
+
+    if (incident.status !== "confirmed") {
+      return { updated: false, linkedDriver: false, linkedVehicle: false };
+    }
+
+    const linkedDriver = !incident.driverId && Boolean(driverId);
+    const linkedVehicle = !incident.vehicleId && Boolean(vehicleId);
+
+    if (!linkedDriver && !linkedVehicle) {
+      return { updated: false, linkedDriver: false, linkedVehicle: false };
+    }
+
+    const update = { updatedAt: new Date() };
+    if (linkedDriver) update.driverId = driverId;
+    if (linkedVehicle) update.vehicleId = vehicleId;
+    if (!incident.confirmedAt) update.confirmedAt = new Date();
+    if (plate && incident.plate !== plate) update.plate = plate;
+
+    transaction.update(incidentRef, update);
+
+    if (linkedDriver) {
+      transaction.update(db.collection("drivers").doc(driverId), {
+        incidentCount: FieldValue.increment(1),
+      });
+    }
+
+    if (linkedVehicle) {
+      transaction.update(db.collection("vehicles").doc(vehicleId), {
+        incidentCount: FieldValue.increment(1),
+      });
+    }
+
+    return { updated: true, linkedDriver, linkedVehicle };
+  });
+}
+
+// Add a report's platform to the driver unless an equivalent entry
+// (case-insensitive) is already present.
+async function addDriverPlatformIfMissing(driverId, platform) {
+  if (!driverId || !platform) return;
+
+  const driverRef = db.collection("drivers").doc(driverId);
+  const driverDoc = await driverRef.get();
+  if (!driverDoc.exists) return;
+
+  const platforms = driverDoc.data().platforms || [];
+  const alreadyListed = platforms.some(
+    (entry) => String(entry).toLowerCase() === String(platform).toLowerCase(),
+  );
+  if (alreadyListed) return;
+
+  await driverRef.update({ platforms: [...platforms, platform] });
+}
+
 // =====================================================
 // Verifications
 // =====================================================
@@ -377,6 +450,8 @@ export {
   findConfirmedIncidentsByDriverId,
   findConfirmedIncidentsByVehicleId,
   markIncidentConfirmed,
+  linkConfirmedIncident,
+  addDriverPlatformIfMissing,
   createVerification,
   findVerificationsByVehicleId,
 };

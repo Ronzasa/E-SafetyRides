@@ -1,4 +1,13 @@
 import { createIncident, getIncidentById, getIncidents, uploadEvidenceImage, addEvidenceToIncident, addCorroboration, getCorroborations } from './reports.service.js';
+import { normalisePlate, isValidPlate } from '../driverSearch/driverValidation.js';
+
+// Public endpoints (GET / and GET /:id are unauthenticated) must never
+// expose reporter identity — POPIA data minimisation. The reporter's own
+// view (GET /mine) and the admin API keep the full document.
+function toPublicIncident(incident) {
+    const { reporterId, ...safe } = incident;
+    return safe;
+}
 
 async function handleCreateIncident(req, res) {
     try {
@@ -7,6 +16,13 @@ async function handleCreateIncident(req, res) {
         // Basic validation — required fields
         if (!plate || !platform || !vehicleType || !type || !severity || !description || !area) {
             return res.status(400).json({ success: false, error: 'Missing required fields' });
+        }
+
+        // The plate must survive normalisePlate and pass the same rule
+        // driver search enforces — otherwise the report could never be
+        // found by plate once confirmed (or would mint a junk vehicle).
+        if (typeof plate !== 'string' || !isValidPlate(normalisePlate(plate))) {
+            return res.status(400).json({ success: false, error: 'Please enter a valid plate number.' });
         }
 
         const incident = await createIncident({
@@ -26,7 +42,7 @@ async function handleGetIncident(req, res) {
         if (!incident) {
             return res.status(404).json({ success: false, error: 'Incident not found' });
         }
-        res.json({ success: true, incident });
+        res.json({ success: true, incident: toPublicIncident(incident) });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -47,11 +63,11 @@ async function handleListIncidents(req, res) {
                 getIncidents({ area, platform, severity, status: 'under_review' }),
                 getIncidents({ area, platform, severity, status: 'confirmed' }),
             ]);
-            const incidents = [...underReview, ...confirmed];
+            const incidents = [...underReview, ...confirmed].map(toPublicIncident);
             return res.json({ success: true, count: incidents.length, incidents });
         }
 
-        const incidents = await getIncidents({ area, platform, severity, status: safeStatus });
+        const incidents = (await getIncidents({ area, platform, severity, status: safeStatus })).map(toPublicIncident);
         res.json({ success: true, count: incidents.length, incidents });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

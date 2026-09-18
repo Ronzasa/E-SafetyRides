@@ -35,9 +35,19 @@ function describeIncident(incident) {
 // Public safety record for a driver or vehicle: a safe badge when there are
 // no confirmed incidents, otherwise a warning with the incident details.
 // Only confirmed incidents are ever passed in — pending/rejected reports
-// never reach this component.
-export function SafetySummary({ incidents = [], subject = "driver" }) {
+// never reach this component. When contextNote is provided (e.g. the linked
+// vehicle carries incidents the driver is not named on), the empty state
+// must not read as a clean bill of health for the subject.
+export function SafetySummary({ incidents = [], subject = "driver", contextNote = null }) {
   if (!incidents.length) {
+    if (contextNote) {
+      return (
+        <div className="context-note">
+          No confirmed incidents against this {subject}. {contextNote}
+        </div>
+      );
+    }
+
     return (
       <div className="safe-badge">✓ No confirmed incidents on record</div>
     );

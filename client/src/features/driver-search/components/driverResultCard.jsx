@@ -9,6 +9,26 @@ function formatVehicleLine(vehicle) {
     .join(" · ");
 }
 
+// A driver card must never read "clean" while the vehicle it is linked to
+// carries confirmed incidents (for example a report that named no driver).
+// Sum the linked vehicles' incident counts and point the reader to where
+// the details are, so "no incidents against this driver" is unambiguous.
+function vehicleIncidentNote(vehicles = []) {
+  const total = vehicles.reduce(
+    (sum, vehicle) => sum + (vehicle.incidentCount || 0),
+    0,
+  );
+
+  if (total === 0) return null;
+
+  const holder =
+    vehicles.length > 1 ? "Linked vehicles have" : "The linked vehicle has";
+
+  return `${holder} ${total} confirmed incident${
+    total === 1 ? "" : "s"
+  } — check the plate number for details.`;
+}
+
 export function DriverResultCard({ result }) {
   if (!result) return null;
 
@@ -51,7 +71,11 @@ export function DriverResultCard({ result }) {
             ) : (
               <p>No vehicle currently linked.</p>
             )}
-            <SafetySummary incidents={driver.incidents} subject="driver" />
+            <SafetySummary
+              incidents={driver.incidents}
+              subject="driver"
+              contextNote={vehicleIncidentNote(driver.vehicles)}
+            />
           </div>
         ))}
       </div>
@@ -95,6 +119,11 @@ export function DriverResultCard({ result }) {
         Vehicle: {formatVehicleLine(result.vehicle)}
       </p>
 
+      <p className="verification-count">
+        Vehicle verified {result.vehicle.verificationCount || 0} time
+        {(result.vehicle.verificationCount || 0) === 1 ? "" : "s"}
+      </p>
+
       {vehicleIncidents.length > 0 && (
         <SafetySummary incidents={vehicleIncidents} subject="vehicle" />
       )}
@@ -117,12 +146,17 @@ export function DriverResultCard({ result }) {
             </p>
           )}
 
-          <p className="verification-count">
-            Verified {result.vehicle.verificationCount || 0} time
-            {(result.vehicle.verificationCount || 0) === 1 ? "" : "s"}
-          </p>
-
-          <SafetySummary incidents={driver.incidents} subject="driver" />
+          <SafetySummary
+            incidents={driver.incidents}
+            subject="driver"
+            contextNote={
+              vehicleIncidents.length > 0
+                ? `The linked vehicle has ${vehicleIncidents.length} confirmed incident${
+                    vehicleIncidents.length === 1 ? "" : "s"
+                  } — see the vehicle section above.`
+                : null
+            }
+          />
         </div>
       ))}
     </div>

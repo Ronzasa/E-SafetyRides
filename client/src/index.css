@@ -630,7 +630,8 @@ a:focus-visible {
 }
 
 .safe-badge,
-.warning-banner {
+.warning-banner,
+.context-note {
   width: 100%;
   margin-top: 1rem;
   padding: 0.7rem 1rem;
@@ -644,6 +645,14 @@ a:focus-visible {
 .safe-badge {
   background: rgba(31, 170, 89, 0.12);
   color: var(--color-success);
+}
+
+/* Amber, not green: the subject itself is clean but the linked vehicle
+   carries confirmed incidents — must not read as an all-clear. */
+.context-note {
+  background: rgba(245, 166, 35, 0.12);
+  color: #96650a;
+  font-weight: 500;
 }
 
 .warning-banner {

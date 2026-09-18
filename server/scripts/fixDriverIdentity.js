@@ -15,7 +15,13 @@
 //                             duplicate documents are deleted.
 //   3. Legacy confirmations - confirmed incidents that never received their
 //                             driver/vehicle linkage (confirmed before the
-//                             linkage logic existed) are linked now.
+//                             linkage logic existed) are linked now. Junk
+//                             plates are never minted into vehicle records;
+//                             such incidents are flagged for manual review.
+//   4. Driver platform fixes - stray hand-seeded platform keys are folded
+//                             into `platforms`, and every platform reported
+//                             on a confirmed incident is backfilled onto the
+//                             linked driver (case-insensitive, no dupes).
 //   Finally, every driver and vehicle incidentCount is recomputed from the
 //   actual confirmed incident records so the counters cannot drift.
 //
@@ -33,6 +39,7 @@ import {
 import {
   normaliseNameKey,
   normalisePlate,
+  isValidPlate,
 } from "../modules/driverSearch/driverValidation.js";
 
 const APPLY = process.argv.includes("--apply");
@@ -82,6 +89,52 @@ function unionArrays(...arrays) {
     for (const value of array) set.add(value);
   }
   return Array.from(set);
+}
+
+// Build a platforms fix for one driver: fold the current platforms array,
+// any stray hand-seeded platform key ("platform", "platforms " — matched
+// after trimming), and the platforms of confirmed incidents into a single
+// case-insensitively deduplicated list. Returns null when nothing changes.
+function buildPlatformFix(target, data, fromIncidents) {
+  const platforms = [];
+  const keysToDelete = [];
+
+  const add = (value) => {
+    if (typeof value !== "string") return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    if (
+      !platforms.some((entry) => entry.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      platforms.push(trimmed);
+    }
+  };
+
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "platforms") {
+      if (Array.isArray(value)) value.forEach(add);
+      else add(value);
+      continue;
+    }
+    const normalisedKey = key.trim();
+    if (normalisedKey === "platforms" || normalisedKey === "platform") {
+      keysToDelete.push(key);
+      if (Array.isArray(value)) value.forEach(add);
+      else add(value);
+    }
+  }
+
+  for (const platform of fromIncidents) add(platform);
+
+  const current = Array.isArray(data.platforms) ? data.platforms : [];
+  if (
+    keysToDelete.length === 0 &&
+    JSON.stringify(current) === JSON.stringify(platforms)
+  ) {
+    return null;
+  }
+
+  return { ...target, platforms, keysToDelete };
 }
 
 // The pre-existing record wins: confirmation-created duplicates always carry
@@ -256,6 +309,7 @@ async function main() {
       vehicleId: null,
       createDriver: null,
       createVehicle: null,
+      skippedVehiclePlate: null,
     };
 
     const nameValue =
@@ -278,12 +332,22 @@ async function main() {
       const existing = vehicleByPlate.get(plate);
       if (existing) {
         plan.vehicleId = existing;
-      } else {
+      } else if (isValidPlate(plate)) {
         plan.createVehicle = { plate };
+      } else {
+        // A plate that fails normalisePlate + isValidPlate can never be
+        // searched — never mint a junk vehicle; flag it for manual review.
+        plan.skippedVehiclePlate = plate;
       }
     }
 
-    if (plan.driverId || plan.vehicleId || plan.createDriver || plan.createVehicle) {
+    if (
+      plan.driverId ||
+      plan.vehicleId ||
+      plan.createDriver ||
+      plan.createVehicle ||
+      plan.skippedVehiclePlate
+    ) {
       legacyLinks.push(plan);
     }
   }
@@ -348,6 +412,80 @@ async function main() {
     }
   }
 
+  // ── Driver platform plan ──
+  // Every platform reported on a confirmed incident should appear on the
+  // linked driver, and stray hand-seeded keys must be folded into the
+  // platforms array.
+  const incidentPlatformsByDriver = new Map();
+  const incidentPlatformsByNewDriver = new Map();
+
+  const addPlatformTo = (map, key, platform) => {
+    if (!map.has(key)) map.set(key, []);
+    const list = map.get(key);
+    if (
+      !list.some((entry) => entry.toLowerCase() === platform.toLowerCase())
+    ) {
+      list.push(platform);
+    }
+  };
+
+  for (const incident of incidents) {
+    if (incident.data.status !== "confirmed") continue;
+    const platform =
+      typeof incident.data.platform === "string"
+        ? incident.data.platform.trim()
+        : "";
+    if (!platform) continue;
+
+    let targetId = incident.data.driverId || null;
+    if (targetId && duplicateToSurvivor.has(targetId)) {
+      targetId = duplicateToSurvivor.get(targetId);
+    }
+
+    if (targetId) {
+      addPlatformTo(incidentPlatformsByDriver, targetId, platform);
+      continue;
+    }
+
+    const legacy = legacyByIncident.get(incident.id);
+    if (!legacy) continue;
+    if (legacy.driverId) {
+      let resolvedId = legacy.driverId;
+      if (duplicateToSurvivor.has(resolvedId)) {
+        resolvedId = duplicateToSurvivor.get(resolvedId);
+      }
+      addPlatformTo(incidentPlatformsByDriver, resolvedId, platform);
+    } else if (legacy.createDriver) {
+      addPlatformTo(
+        incidentPlatformsByNewDriver,
+        legacy.createDriver.nameKey,
+        platform,
+      );
+    }
+  }
+
+  const platformFixes = [];
+  for (const driver of drivers) {
+    if (duplicateToSurvivor.has(driver.id)) continue;
+    const merge = merges.find((item) => item.survivor.id === driver.id);
+    const effectiveData = merge
+      ? { ...driver.data, platforms: merge.platforms }
+      : driver.data;
+    const fix = buildPlatformFix(
+      {
+        id: driver.id,
+        name: readField(driver.data, "name").value || "(unnamed)",
+      },
+      effectiveData,
+      incidentPlatformsByDriver.get(driver.id) || [],
+    );
+    if (fix) platformFixes.push(fix);
+  }
+  for (const [nameKey, platforms] of incidentPlatformsByNewDriver) {
+    const fix = buildPlatformFix({ nameKey }, {}, platforms);
+    if (fix) platformFixes.push(fix);
+  }
+
   // ── Report the plan ──
   console.log(`\n1. Driver field fixes: ${backfills.length}`);
   for (const item of backfills) {
@@ -381,8 +519,23 @@ async function main() {
     if (plan.createDriver) actions.push(`create driver "${plan.createDriver.name}"`);
     if (plan.vehicleId) actions.push(`vehicle=${plan.vehicleId}`);
     if (plan.createVehicle) actions.push(`create vehicle "${plan.createVehicle.plate}"`);
+    if (plan.skippedVehiclePlate)
+      actions.push(`SKIP invalid plate "${plan.skippedVehiclePlate}" (manual review)`);
     console.log(
       `   ${plan.incidentId} ("${incident.data.driverName ?? "no driver name"}", plate ${incident.data.plate}): ${actions.join(", ")}`,
+    );
+  }
+
+  console.log(`\n4. Driver platform fixes: ${platformFixes.length}`);
+  for (const fix of platformFixes) {
+    const label = fix.id
+      ? `driver ${fix.id} "${fix.name}"`
+      : `new driver "${fix.nameKey}"`;
+    const stray = fix.keysToDelete.length
+      ? ` (removes stray key(s): ${fix.keysToDelete.map((key) => `"${key}"`).join(", ")})`
+      : "";
+    console.log(
+      `   ${label}: platforms -> [${fix.platforms.map((platform) => `"${platform}"`).join(", ")}]${stray}`,
     );
   }
 
@@ -539,6 +692,12 @@ async function main() {
       await linkDriverVehiclePair(vehicleId, driverId);
     }
 
+    if (plan.skippedVehiclePlate) {
+      console.log(
+        `   ${plan.incidentId}: plate "${plan.skippedVehiclePlate}" fails validation - vehicle skipped, needs manual review.`,
+      );
+    }
+
     const update = {};
     if (driverId) update.driverId = driverId;
     if (vehicleId) update.vehicleId = vehicleId;
@@ -556,7 +715,27 @@ async function main() {
     );
   }
 
-  // 4. Recompute every counter from the actual confirmed incidents so the
+  // 4. Driver platform backfill: fold stray seed keys and the platforms of
+  //    confirmed incidents into drivers.platforms.
+  console.log("\nBackfilling driver platforms from confirmed incidents...");
+  let platformUpdates = 0;
+  for (const fix of platformFixes) {
+    const driverId = fix.id || driverByKey.get(fix.nameKey);
+    if (!driverId) {
+      console.log(
+        `   Skipped platform fix for "${fix.nameKey}" - no live driver record.`,
+      );
+      continue;
+    }
+    const update = { platforms: fix.platforms };
+    for (const key of fix.keysToDelete) update[key] = FieldValue.delete();
+    await db.collection("drivers").doc(driverId).update(update);
+    platformUpdates += 1;
+    console.log(`   Updated platforms for ${driverId} "${fix.name || fix.nameKey}".`);
+  }
+  console.log(`   Applied ${platformUpdates} platform fix(es).`);
+
+  // 5. Recompute every counter from the actual confirmed incidents so the
   //    stored incidentCount always matches the public safety profile.
   console.log("\nRecomputing incident counts from confirmed incidents...");
   const finalDrivers = await db.collection("drivers").get();

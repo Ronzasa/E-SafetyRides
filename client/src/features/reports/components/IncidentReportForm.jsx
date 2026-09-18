@@ -79,12 +79,20 @@ function IncidentReportForm({ onSuccess }) {
   }
 
   return (
-    <div className="form-page">
-      <form onSubmit={handleSubmit} className="form-card">
-        <h2>Report an incident</h2>
-        <p className="form-hint">
-          Your report will be reviewed before it appears as a safety signal to other passengers.
+    <main className="form-page report-create-page">
+      <header className="create-page-header">
+        <span className="eyebrow">Safety report</span>
+        <h1>Report an incident</h1>
+        <p>
+          Help keep passengers safe by sharing what happened. Reports are reviewed before they appear as a safety signal.
         </p>
+      </header>
+
+      <form onSubmit={handleSubmit} className="form-card">
+        <div className="form-section-heading">
+          <h2>Incident details</h2>
+          <p className="form-hint">Fields marked as required help us identify and review the incident.</p>
+        </div>
 
         {error && <div className="auth-error">{error}</div>}
 
@@ -151,7 +159,7 @@ function IncidentReportForm({ onSuccess }) {
           {submitting ? 'Submitting...' : 'Submit report'}
         </button>
       </form>
-    </div>
+    </main>
   );
 }
 

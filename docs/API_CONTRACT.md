@@ -26,7 +26,7 @@ Error responses: `{ "error": "message" }` (auth module) or `{ "success": false, 
 
 | Method | Path | Auth | Body / Query | Notes |
 |---|---|---|---|---|
-| POST | `/` | required | `{ plate, driverName?, platform, vehicleType, type, severity, description, area }` | Creates with `status: "pending"`; `plate` must be 1-8 letters/digits after normalisation |
+| POST | `/` | required | `{ plate, driverName?, platform, vehicleType, type, severity, description, area }` | Creates with `status: "pending"`; `plate` must be exactly 8 letters/digits after normalisation |
 | GET | `/` | none | `?area&platform&severity&status` | Public — only ever returns `under_review`/`confirmed` unless a specific status is requested; never exposes `reporterId` |
 | GET | `/mine` | required | — | Current user's own reports, any status |
 | GET | `/:id` | none | — | Single incident; never exposes `reporterId` |

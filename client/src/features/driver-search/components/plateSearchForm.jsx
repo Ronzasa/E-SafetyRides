@@ -6,9 +6,9 @@ const NAME_CHAR_REGEX = /[^A-Za-z\s'-]/g;
 const PLATE_MAX_LENGTH = 8;
 const NAME_MAX_LENGTH = 50;
 
-// Must match the rule the server enforces on report plates (normalisePlate +
-// isValidPlate): 1-8 letters/digits after normalisation. A stricter shape
-// here would make plates accepted by the report form unsearchable in the UI.
+// Must match the server's search rule (normalisePlate + isValidPlate):
+// 1-8 letters/digits after normalisation, e.g. ABC123GP. Anything the
+// report form accepts must be findable here.
 const PLATE_FORMAT_REGEX = /^[A-Z0-9]{1,8}$/;
 const NAME_FORMAT_REGEX = /^[A-Za-z]+([\s'-][A-Za-z]+)*$/;
 

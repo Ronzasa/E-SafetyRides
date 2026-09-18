@@ -15,7 +15,7 @@
 | Field | Type | Notes |
 |---|---|---|
 | reporterId | string | uid of reporting user |
-| plate | string | stored normalised (uppercase, no spaces/dashes); must be 1-8 letters/digits after normalisation |
+| plate | string | stored normalised (uppercase, no spaces/dashes); new report submissions must be exactly 8 letters/digits |
 | driverName | string | optional |
 | platform | string | `uber` \| `bolt` \| `indrive` \| `other` |
 | vehicleType | string | `sedan` \| `hatchback` \| `suv` \| `minibus` \| `other` |

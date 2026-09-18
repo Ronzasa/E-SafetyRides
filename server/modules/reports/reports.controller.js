@@ -1,5 +1,5 @@
 import { createIncident, getIncidentById, getIncidents, uploadEvidenceImage, addEvidenceToIncident, addCorroboration, getCorroborations } from './reports.service.js';
-import { normalisePlate, isValidPlate } from '../driverSearch/driverValidation.js';
+import { normalisePlate, isValidReportPlate } from '../driverSearch/driverValidation.js';
 
 // Public endpoints (GET / and GET /:id are unauthenticated) must never
 // expose reporter identity — POPIA data minimisation. The reporter's own
@@ -18,11 +18,11 @@ async function handleCreateIncident(req, res) {
             return res.status(400).json({ success: false, error: 'Missing required fields' });
         }
 
-        // The plate must survive normalisePlate and pass the same rule
-        // driver search enforces — otherwise the report could never be
-        // found by plate once confirmed (or would mint a junk vehicle).
-        if (typeof plate !== 'string' || !isValidPlate(normalisePlate(plate))) {
-            return res.status(400).json({ success: false, error: 'Please enter a valid plate number.' });
+        // New report plates must be exactly 8 letters/digits (all caps after
+        // normalisePlate) — the same rule the report form enforces. Driver
+        // search accepts 1-8 so every plate accepted here stays searchable.
+        if (typeof plate !== 'string' || !isValidReportPlate(normalisePlate(plate))) {
+            return res.status(400).json({ success: false, error: 'Please enter a valid plate number (exactly 8 letters/digits, e.g. ABC123GP).' });
         }
 
         const incident = await createIncident({

@@ -1,6 +1,7 @@
 import { db } from '../../config/firebase.js';
 import cloudinary from '../../config/cloudinary.js';
 import { FieldValue } from 'firebase-admin/firestore';
+import { normalisePlate } from '../driverSearch/driverValidation.js';
 
 const incidentsRef = db.collection('incidents');
 const corroborationsRef = db.collection('corroborations');
@@ -9,8 +10,10 @@ async function createIncident(data) {
   const now = new Date();
   const incident = {
     reporterId: data.reporterId,
-    plate: data.plate.toUpperCase().trim(),
-    driverName: data.driverName || null,
+    // Stored in the same canonical form driver search uses, so a confirmed
+    // report always matches the vehicle record created for it.
+    plate: normalisePlate(data.plate),
+    driverName: data.driverName?.trim() || null,
     platform: data.platform,
     vehicleType: data.vehicleType,
     type: data.type,

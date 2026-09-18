@@ -17,7 +17,7 @@ async function request(path, { method = 'GET', body, formData, auth = true } = {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-        const message = data.error || `Request failed (${res.status})`;
+        const message = data.error || data.message || `Request failed (${res.status})`;
         const error = new Error(message);
         error.status = res.status;
         throw error;

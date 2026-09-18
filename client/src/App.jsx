@@ -27,7 +27,14 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-driver" element={<VerifyDriver />} />
+          <Route
+            path="/verify-driver"
+            element={
+              <ProtectedRoute>
+                <VerifyDriver />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/report"
             element={

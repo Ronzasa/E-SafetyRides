@@ -18,7 +18,12 @@ export function IdentityConfirmControl({ target, showToast }) {
   }
 
   function handleYes() {
-    navigate(`/verify-driver?plate=${encodeURIComponent(target.plate)}`);
+    const params = new URLSearchParams({
+      plate: target.plate,
+      vehicleId: target.vehicleId,
+      driverId: target.driverId,
+    });
+    navigate(`/verify-driver?${params.toString()}`);
   }
 
   async function handleNo() {

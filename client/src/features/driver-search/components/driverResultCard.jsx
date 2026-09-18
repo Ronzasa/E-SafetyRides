@@ -47,7 +47,8 @@ export function DriverResultCard({ result, showToast }) {
       <div className="result-card result-known">
         <h2 className="profile-heading">Search Results</h2>
         {result.drivers.map((driver) => {
-          const plate = driver.vehicles?.[0]?.plateNumber;
+          const vehicle = driver.vehicles?.[0];
+          const plate = vehicle?.plateNumber;
           return (
             <div key={driver.id} className="driver-info name-result-item">
               <img
@@ -79,10 +80,12 @@ export function DriverResultCard({ result, showToast }) {
                 subject="driver"
                 contextNote={vehicleIncidentNote(driver.vehicles)}
               />
-              {plate && (
+              {plate && vehicle?.id && (
                 <IdentityConfirmControl
                   target={{
+                    driverId: driver.id,
                     driverName: driver.name,
+                    vehicleId: vehicle.id,
                     plate,
                     platform: driver.platforms?.[0],
                   }}
@@ -172,10 +175,12 @@ export function DriverResultCard({ result, showToast }) {
             }
           />
 
-          {result.vehicle?.plateNumber && (
+          {result.vehicle?.plateNumber && result.vehicle?.id && (
             <IdentityConfirmControl
               target={{
+                driverId: driver.id,
                 driverName: driver.name,
+                vehicleId: result.vehicle.id,
                 plate: result.vehicle.plateNumber,
                 platform: driver.platforms?.[0],
               }}

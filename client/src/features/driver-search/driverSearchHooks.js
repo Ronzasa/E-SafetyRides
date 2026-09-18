@@ -135,6 +135,7 @@ export function useDriverSearch() {
     confirmMatch,
     rejectMatch,
     toast,
+    showToast,
     dismissToast,
   };
 }

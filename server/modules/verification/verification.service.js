@@ -3,10 +3,14 @@ import { encryptDescriptor, decryptDescriptor } from '../../utils/biometricCrypt
 
 const REFERENCES = 'verificationReferences';
 const ATTEMPTS = 'verificationAttempts';
+
 const MATCH_DISTANCE_THRESHOLD = 0.6;
+const MIN_CONFIDENCE = 0.5; // 70% minimum confidence required
 
 function euclideanDistance(a, b) {
-  return Math.sqrt(a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0));
+  return Math.sqrt(
+    a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0)
+  );
 }
 
 export async function scanPlate({ plate, descriptor, uid }) {
@@ -33,14 +37,25 @@ export async function scanPlate({ plate, descriptor, uid }) {
 
     return {
       result: 'no_record',
-      message: 'No prior verification for this plate. This scan has been saved as the reference photo for future checks.',
+      message:
+        'No prior verification for this plate. This scan has been saved as the reference photo for future checks.',
     };
   }
 
-  const referenceDescriptor = decryptDescriptor(referenceSnap.data().descriptor);
+  const referenceDescriptor = decryptDescriptor(
+    referenceSnap.data().descriptor
+  );
+
   const distance = euclideanDistance(descriptor, referenceDescriptor);
-  const isMatch = distance < MATCH_DISTANCE_THRESHOLD;
-  const confidence = Math.max(0, Math.min(1, 1 - distance / MATCH_DISTANCE_THRESHOLD));
+
+  // Convert the distance into a confidence score between 0 and 1
+  const confidence = Math.max(
+    0,
+    Math.min(1, 1 - distance / MATCH_DISTANCE_THRESHOLD)
+  );
+
+  // Only accept the driver if the confidence is at least 70%
+  const isMatch = confidence >= MIN_CONFIDENCE;
 
   await db.collection(ATTEMPTS).add({
     plate: normalisedPlate,
@@ -63,7 +78,9 @@ export async function scanPlate({ plate, descriptor, uid }) {
 
 export async function getHistory(plate) {
   const normalisedPlate = plate.toUpperCase().trim();
-  const snap = await db.collection(ATTEMPTS)
+
+  const snap = await db
+    .collection(ATTEMPTS)
     .where('plate', '==', normalisedPlate)
     .orderBy('createdAt', 'desc')
     .get();

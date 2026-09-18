@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createIncident, uploadEvidence } from '../reportsApi';
-import GoBackButton from '../../../components/GoBackButton';
 
 const PLATFORMS = ['uber', 'bolt', 'indrive', 'other'];
 const VEHICLE_TYPES = ['sedan', 'hatchback', 'suv', 'minibus', 'other'];
@@ -60,7 +59,6 @@ function IncidentReportForm({ onSuccess }) {
 
   return (
     <div className="form-page">
-      <GoBackButton />
       <form onSubmit={handleSubmit} className="form-card">
         <h2>Report an incident</h2>
         <p className="form-hint">

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import GoBackButton from '../components/GoBackButton';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -33,7 +32,6 @@ export default function AdminUsers() {
           <h1>Users</h1>
           <p className="page-subtitle">{users.length} registered user{users.length === 1 ? '' : 's'}</p>
         </div>
-        <GoBackButton />
       </header>
 
       {error && <div className="auth-error">{error}</div>}

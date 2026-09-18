@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import GoBackButton from '../components/GoBackButton';
 
 function StatBar({ label, count, total, color }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -53,7 +52,6 @@ export default function AdminDashboard() {
           <h1>Admin dashboard</h1>
           <p className="page-subtitle">{trends.total} total report{trends.total === 1 ? '' : 's'} · {overview.totalUsers} user{overview.totalUsers === 1 ? '' : 's'}</p>
         </div>
-        <GoBackButton />
       </header>
 
       {/* Overview cards */}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import GoBackButton from '../components/GoBackButton';
 
 const STATUS_LABEL = {
   pending: 'Pending review',
@@ -37,7 +36,6 @@ export default function MyReports() {
           <h1>My reports</h1>
           <p className="page-subtitle">Signed in as {user?.name}</p>
         </div>
-        <GoBackButton />
       </header>
 
       {loading && <p>Loading your reports...</p>}

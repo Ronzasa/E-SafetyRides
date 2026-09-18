@@ -31,53 +31,48 @@ function IncidentCard({ incident }) {
   }
 
   return (
-    <div className="max-w-lg mx-auto border border-gray-200 rounded-lg p-5 space-y-3">
-      <div className="flex items-start justify-between">
+    <div className="card report-card">
+      <div className="report-card-top">
         <div>
-          <p className="font-medium text-gray-900">{incident.plate}</p>
-          <p className="text-sm text-gray-500 capitalize">
-            {incident.platform} &middot; {incident.type.replace('_', ' ')} &middot; {incident.area}
+          <p className="report-plate">{incident.plate}</p>
+          <p className="report-meta">
+            {incident.platform} · {incident.type.replace('_', ' ')} · {incident.area}
           </p>
         </div>
         <StatusBadge status={incident.status} />
       </div>
 
-      <p className="text-sm text-gray-700">{incident.description}</p>
+      <p className="report-description">{incident.description}</p>
 
-      <div className="border-t border-gray-100 pt-3">
-        <p className="text-xs text-gray-500 mb-2">
+      <div className="corroboration-divider">
+        <p className="text-muted-sm">
           {corroborations.length === 0
             ? 'No one else has reported a similar experience yet.'
             : `${corroborations.length} passenger${corroborations.length > 1 ? 's have' : ' has'} reported something similar.`}
         </p>
-
-        {corroborations.map((c) => (
-          c.note && (
-            <p key={c.id} className="text-sm text-gray-600 bg-gray-50 rounded-md p-2 mb-1">
-              {c.note}
-            </p>
-          )
+        {corroborations.map((c) => c.note && (
+          <p key={c.id} className="corroboration-note">{c.note}</p>
         ))}
       </div>
 
-      {error && <div className="bg-red-50 text-red-700 text-sm p-2 rounded-md">{error}</div>}
+      {error && <div className="auth-error">{error}</div>}
 
       {corroborated ? (
-        <p className="text-sm text-gray-500">Thanks — your report has been added.</p>
+        <p className="text-muted-sm">Thanks — your report has been added.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="form-field" style={{ marginTop: '0.75rem' }}>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Add a note about your own experience (optional)"
             rows={2}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="button"
+            className="btn-secondary"
             onClick={handleCorroborate}
             disabled={submitting}
-            className="w-full rounded-md bg-gray-800 text-white text-sm font-medium py-2 disabled:opacity-50"
+            style={{ marginTop: '0.5rem' }}
           >
             {submitting ? 'Submitting...' : "I've had a similar experience"}
           </button>

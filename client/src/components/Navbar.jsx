@@ -60,7 +60,13 @@ export function Navbar() {
               to="/admin/trends"
               className={isActive("/admin/trends") ? "navbar-link-active" : ""}
             >
-              Trends
+              Dashboard
+            </Link>
+            <Link
+              to="/admin/users"
+              className={isActive("/admin/users") ? "navbar-link-active" : ""}
+            >
+              Users
             </Link>
           </>
         )}

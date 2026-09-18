@@ -5,6 +5,7 @@ import authRoutes from "./modules/auth/auth.route.js";
 import reportsRoutes from "./modules/reports/reports.route.js";
 import adminRoutes from "./modules/admin/admin.route.js";
 import driverSearchRoutes from "./modules/driverSearch/driverRoutes.js";
+import verificationRoutes from './modules/verification/verification.routes.js';
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.get("/", (req, res) => {
 app.use("/api/reports", reportsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/driver-search", driverSearchRoutes);
+app.use('/api/verification', verificationRoutes);
 
 export default app;

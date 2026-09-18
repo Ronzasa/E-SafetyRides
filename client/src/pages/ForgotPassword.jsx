@@ -9,7 +9,6 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [resetLink, setResetLink] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -22,9 +21,8 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const data = await api.post('/auth/forgot-password', { email });
+      await api.post('/auth/forgot-password', { email }, { auth: false });
       setSent(true);
-      if (data.resetLink) setResetLink(data.resetLink);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -36,20 +34,10 @@ export default function ForgotPassword() {
     return (
       <div className="auth-page">
         <div className="auth-card" style={{ textAlign: 'center' }}>
-          <div className="auth-success">Reset link generated!</div>
+          <div className="auth-success">Check your email</div>
           <p style={{ marginTop: '1rem', color: 'var(--color-text-muted)' }}>
-            If that email is registered, a password reset link has been generated.
+            If that email is registered, a password reset link has been sent to it. The link expires in 1 hour.
           </p>
-          {resetLink && (
-            <div style={{ marginTop: '1rem', textAlign: 'left' }}>
-              <p className="form-hint" style={{ marginBottom: '0.5rem' }}>
-                Demo mode — in production this link would be sent via email:
-              </p>
-              <Link to={resetLink.replace(/^.*\/\/[^/]+/, '')} style={{ wordBreak: 'break-all', fontSize: '0.85rem' }}>
-                {resetLink}
-              </Link>
-            </div>
-          )}
           <Link to="/login" className="btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: '1.5rem', textDecoration: 'none' }}>
             Back to login
           </Link>
@@ -62,7 +50,7 @@ export default function ForgotPassword() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>Forgot password</h1>
-        <p className="auth-subtitle">Enter your email and we'll generate a reset link</p>
+        <p className="auth-subtitle">Enter your email and we'll send you a reset link</p>
 
         {error && <div className="auth-error">{error}</div>}
 

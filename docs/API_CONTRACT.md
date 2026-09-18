@@ -12,7 +12,7 @@ Error responses: `{ "error": "message" }` (auth module) or `{ "success": false, 
 | POST | `/register` | none | `{ name, email, password, confirmPassword }` | `201 { success, user }` — no token; user must log in after registering |
 | POST | `/login` | none | `{ email, password }` | `200 { user, token }` |
 | GET | `/me` | required | — | `200 { user: { uid, role } }` |
-| POST | `/forgot-password` | none | `{ email }` | `200 { success, message, resetLink? }` |
+| POST | `/forgot-password` | none | `{ email }` | `200 { success, message }` — sends real email via SMTP; never returns the link |
 | POST | `/reset-password` | none | `{ token, newPassword, confirmPassword }` | `200 { success, message }` |
 
 `user` object: `{ uid, name, email, role }`. `role` is `"passenger"` or `"admin"` (admins are set manually in Firestore, never via register).

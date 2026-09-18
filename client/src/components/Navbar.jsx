@@ -5,7 +5,9 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  if (!user) return null;
+  // Hide navbar entirely on auth pages
+  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  if (!user || authRoutes.includes(location.pathname)) return null;
 
   const isActive = (path) => location.pathname === path;
 

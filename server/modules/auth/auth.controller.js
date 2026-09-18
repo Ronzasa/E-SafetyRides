@@ -71,9 +71,9 @@ export async function forgotPasswordController(req, res) {
             return res.status(400).json({ error: 'invalid email format' });
         }
 
-        const result = await forgotPassword(email);
-        // Always return the same message whether the email exists or not (security: prevents email enumeration)
-        res.status(200).json({ success: true, message: 'If that email is registered, a password reset link has been generated.', resetLink: result.resetLink });
+        await forgotPassword(email);
+        // Always the same response whether the email exists or not — prevents email enumeration
+        res.status(200).json({ success: true, message: 'If that email is registered, a reset link has been sent to it.' });
     } catch (err) {
         console.error('forgotPassword error:', err);
         res.status(500).json({ error: 'Something went wrong' });

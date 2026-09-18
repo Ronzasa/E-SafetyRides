@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { db } from '../../config/firebase.js';
+import { sendPasswordResetEmail } from '../../config/mailer.js';
 
 const usersRef = db.collection('users');
 const SALT_ROUNDS = 10;
@@ -69,8 +70,8 @@ export async function forgotPassword(email) {
 
     const snapshot = await usersRef.where('email', '==', normalisedEmail).limit(1).get();
     if (snapshot.empty) {
-        // Don't reveal whether the email exists — return a fake link
-        return { resetLink: null };
+        // Don't reveal whether the email exists — return quietly.
+        return;
     }
 
     const doc = snapshot.docs[0];
@@ -80,7 +81,7 @@ export async function forgotPassword(email) {
     await doc.ref.update({ resetToken, resetTokenExpiry });
 
     const resetLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    return { resetLink };
+    await sendPasswordResetEmail(normalisedEmail, resetLink);
 }
 
 export async function resetPassword(token, newPassword) {

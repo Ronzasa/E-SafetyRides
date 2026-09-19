@@ -12,7 +12,7 @@ const REFERENCES = 'verificationReferences';
 const ATTEMPTS = 'verificationAttempts';
 
 const MATCH_DISTANCE_THRESHOLD = 0.6;
-const MIN_CONFIDENCE = 0.7;
+const MIN_CONFIDENCE = 0.5;
 
 function euclideanDistance(a, b) {
   return Math.sqrt(

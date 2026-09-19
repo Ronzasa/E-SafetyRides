@@ -1,47 +1,54 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AppIcon, PageIntro, SafetyAppShell, StatusPill } from '../components/SafetyAppShell';
+import {
+  AppIcon,
+  PageIntro,
+  SafetyAppShell,
+  StatusPill,
+} from '../components/SafetyAppShell';
 import { api } from '../lib/api';
 import { loadFaceModels, getFaceDescriptor } from '../lib/faceApi';
 
-const STEPS = { PLATE: 'plate', CONSENT: 'consent', CAMERA: 'camera', RESULT: 'result' };
-
-const RESULT_COPY = {
-  match: { label: 'Match', tone: 'green', heading: 'Identity matches' },
-  mismatch: { label: 'Mismatch', tone: 'red', heading: 'Identity does not match' },
-  no_record: { label: 'No record', tone: 'neutral', heading: 'No verified record found' },
+const STEPS = {
+  PLATE: 'plate',
+  CONSENT: 'consent',
+  CAMERA: 'camera',
+  RESULT: 'result',
 };
 
-function normalisePlate(value) {
-  return value.trim().toUpperCase().replace(/[\s-]/g, '');
-}
+const RESULT_COPY = {
+  match: {
+    label: 'Match',
+    tone: 'green',
+    heading: 'Identity matches',
+  },
+  mismatch: {
+    label: 'Mismatch',
+    tone: 'red',
+    heading: 'Identity does not match',
+  },
+  no_record: {
+    label: 'No record',
+    tone: 'neutral',
+    heading: 'No verified record found',
+  },
+};
 
 export default function VerifyDriver() {
   const [searchParams] = useSearchParams();
+
   const [step, setStep] = useState(STEPS.PLATE);
   const [plate, setPlate] = useState(searchParams.get('plate') || '');
-  const [vehicleId, setVehicleId] = useState(searchParams.get('vehicleId') || '');
-  const [driverId, setDriverId] = useState(searchParams.get('driverId') || '');
   const [consentChecked, setConsentChecked] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-  const hasVerificationTarget = Boolean(vehicleId && driverId);
 
   function handlePlateSubmit(e) {
     e.preventDefault();
-    const normalisedPlate = normalisePlate(plate);
 
-    if (!/^[A-Z0-9]{1,8}$/.test(normalisedPlate)) {
-      setError('Enter a valid vehicle plate number.');
-      return;
-    }
-    if (!hasVerificationTarget) {
-      setError('Search for the driver first, then select Yes, Verify from the matching result.');
-      return;
-    }
+    if (!plate.trim()) return;
 
-    setPlate(normalisedPlate);
     setError('');
     setStep(STEPS.CONSENT);
   }
@@ -54,14 +61,14 @@ export default function VerifyDriver() {
   async function handleCaptured(descriptor) {
     setSubmitting(true);
     setError('');
+
     try {
       const data = await api.post('/verification/scan', {
-        plate: normalisePlate(plate),
-        vehicleId,
-        driverId,
+        plate: plate.trim(),
         descriptor,
         consent: true,
       });
+
       setResult(data);
       setStep(STEPS.RESULT);
       return true;
@@ -75,8 +82,6 @@ export default function VerifyDriver() {
 
   function handleScanAnother() {
     setPlate('');
-    setVehicleId('');
-    setDriverId('');
     setConsentChecked(false);
     setResult(null);
     setError('');
@@ -89,20 +94,26 @@ export default function VerifyDriver() {
         <PageIntro
           eyebrow="Identity check"
           title="Verify a driver"
-          description="Confirm the person behind the wheel matches the vehicle's public record."
+          description="Confirm the person behind the wheel matches this vehicle's public record."
         />
 
         <VerificationStepper step={step} />
+
         {error && <div className="auth-error">{error}</div>}
 
         {step === STEPS.PLATE && (
           <form className="verify-card" onSubmit={handlePlateSubmit}>
-            <div className="verify-icon"><AppIcon name="verify" size={24} /></div>
+            <div className="verify-icon">
+              <AppIcon name="verify" size={24} />
+            </div>
+
             <h2>Which vehicle are you checking?</h2>
-            <p>Start with the plate number on the vehicle you are about to enter.</p>
-            {hasVerificationTarget && (
-              <p className="verify-privacy-note">This plate is linked to the driver you selected in search.</p>
-            )}
+
+            <p>
+              Start with the plate number on the vehicle you are about to
+              enter.
+            </p>
+
             <input
               id="plate"
               className="full-input"
@@ -110,10 +121,15 @@ export default function VerifyDriver() {
               onChange={(e) => setPlate(e.target.value)}
               placeholder="e.g. CA 123-456"
               required
-              readOnly={hasVerificationTarget}
               autoFocus
             />
-            <button type="submit" className="app-button primary full-button">Continue</button>
+
+            <button
+              type="submit"
+              className="app-button primary full-button"
+            >
+              Continue
+            </button>
           </form>
         )}
 
@@ -136,7 +152,11 @@ export default function VerifyDriver() {
         )}
 
         {step === STEPS.RESULT && result && (
-          <ResultStep plate={plate} result={result} onScanAnother={handleScanAnother} />
+          <ResultStep
+            plate={plate}
+            result={result}
+            onScanAnother={handleScanAnother}
+          />
         )}
       </div>
     </SafetyAppShell>
@@ -144,35 +164,81 @@ export default function VerifyDriver() {
 }
 
 function VerificationStepper({ step }) {
-  const secondStepDone = step === STEPS.CAMERA || step === STEPS.RESULT;
+  const secondStepDone =
+    step === STEPS.CAMERA || step === STEPS.RESULT;
+
   const thirdStepDone = step === STEPS.RESULT;
 
   return (
     <div className="stepper" aria-label="Verification progress">
-      <span className="done">1</span><i />
-      <span className={secondStepDone ? 'done' : ''}>2</span><i />
+      <span className="done">1</span>
+      <i />
+
+      <span className={secondStepDone ? 'done' : ''}>2</span>
+      <i />
+
       <span className={thirdStepDone ? 'done' : ''}>3</span>
     </div>
   );
 }
 
-function ConsentStep({ plate, checked, onCheckedChange, onBack, onContinue }) {
+function ConsentStep({
+  plate,
+  checked,
+  onCheckedChange,
+  onBack,
+  onContinue,
+}) {
   return (
     <div className="verify-card">
-      <div className="verify-icon"><AppIcon name="shield" size={24} /></div>
+      <div className="verify-icon">
+        <AppIcon name="shield" size={24} />
+      </div>
+
       <h2>Ask for consent first</h2>
+
       <p>
-        We will capture a photo of the driver&apos;s face to check it against plate <strong>{plate.toUpperCase()}</strong>.
-        The photo itself is never stored — only an encrypted mathematical representation is kept.
+        We will capture a photo of the driver's face to check it against
+        plate <strong>{plate.toUpperCase()}</strong>. The photo itself is
+        never stored — only an encrypted mathematical representation is
+        kept.
       </p>
-      <p className="verify-privacy-note">This is sensitive personal information under South African privacy law (POPIA). The driver should know this scan is happening.</p>
+
+      <p className="verify-privacy-note">
+        This is sensitive personal information under South African privacy
+        law (POPIA). The driver should know this scan is happening.
+      </p>
+
       <label className="consent-line">
-        <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} />
-        <span>I confirm the driver has been informed and I have consent to capture this scan.</span>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onCheckedChange(e.target.checked)}
+        />
+
+        <span>
+          I confirm the driver has been informed and I have consent to
+          capture this scan.
+        </span>
       </label>
+
       <div className="button-row">
-        <button type="button" className="app-button ghost" onClick={onBack}>Back</button>
-        <button type="button" className="app-button primary" disabled={!checked} onClick={onContinue}>Continue</button>
+        <button
+          type="button"
+          className="app-button ghost"
+          onClick={onBack}
+        >
+          Back
+        </button>
+
+        <button
+          type="button"
+          className="app-button primary"
+          disabled={!checked}
+          onClick={onContinue}
+        >
+          Continue
+        </button>
       </div>
     </div>
   );
@@ -181,6 +247,7 @@ function ConsentStep({ plate, checked, onCheckedChange, onBack, onContinue }) {
 function CameraStep({ submitting, onCaptured, onBack }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
   const [modelsReady, setModelsReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [captureError, setCaptureError] = useState('');
@@ -192,44 +259,69 @@ function CameraStep({ submitting, onCaptured, onBack }) {
     async function setup() {
       try {
         await loadFaceModels();
+
         if (cancelled) return;
+
         setModelsReady(true);
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+        });
+
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
+
         streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       } catch {
-        setCameraError('Could not access the camera. Please allow camera permission and try again.');
+        setCameraError(
+          'Could not access the camera. Please allow camera permission and try again.'
+        );
       }
     }
 
     setup();
+
     return () => {
       cancelled = true;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current
+        ?.getTracks()
+        .forEach((track) => track.stop());
     };
   }, []);
 
   async function handleCapture() {
     if (!videoRef.current) return;
+
     setCapturing(true);
     setCaptureError('');
+
     try {
       const descriptor = await getFaceDescriptor(videoRef.current);
+
       if (!descriptor) {
-        setCaptureError("No face detected. Line up the driver's face in frame and try again.");
+        setCaptureError(
+          "No face detected. Line up the driver's face in frame and try again."
+        );
         return;
       }
+
       const completed = await onCaptured(descriptor);
+
       if (completed) {
-        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current
+          ?.getTracks()
+          .forEach((track) => track.stop());
       }
     } catch {
-      setCaptureError('Something went wrong reading the face. Please try again.');
+      setCaptureError(
+        'Something went wrong reading the face. Please try again.'
+      );
     } finally {
       setCapturing(false);
     }
@@ -238,27 +330,55 @@ function CameraStep({ submitting, onCaptured, onBack }) {
   return (
     <div className="verify-card">
       {cameraError && <div className="auth-error">{cameraError}</div>}
+
       {captureError && <div className="auth-error">{captureError}</div>}
+
       <div className="camera-placeholder">
-        {!modelsReady && !cameraError && <span>Loading camera...</span>}
+        {!modelsReady && !cameraError && (
+          <span>Loading camera...</span>
+        )}
+
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className={modelsReady ? 'camera-feed' : 'camera-feed is-hidden'}
+          className={
+            modelsReady
+              ? 'camera-feed'
+              : 'camera-feed is-hidden'
+          }
         />
       </div>
-      <StatusPill tone="neutral">Photo is not stored</StatusPill>
+
+      <StatusPill tone="neutral">
+        Photo is not stored
+      </StatusPill>
+
       <div className="button-row verify-camera-actions">
-        <button type="button" className="app-button ghost" onClick={onBack} disabled={submitting || capturing}>Back</button>
+        <button
+          type="button"
+          className="app-button ghost"
+          onClick={onBack}
+          disabled={submitting || capturing}
+        >
+          Back
+        </button>
+
         <button
           type="button"
           className="app-button primary"
           onClick={handleCapture}
-          disabled={!modelsReady || Boolean(cameraError) || capturing || submitting}
+          disabled={
+            !modelsReady ||
+            Boolean(cameraError) ||
+            capturing ||
+            submitting
+          }
         >
-          {capturing || submitting ? 'Checking...' : 'Capture and verify'}
+          {capturing || submitting
+            ? 'Checking...'
+            : 'Capture and verify'}
         </button>
       </div>
     </div>
@@ -270,15 +390,35 @@ function ResultStep({ plate, result, onScanAnother }) {
 
   return (
     <div className="verify-card result-verified">
-      <div className="verified-check"><AppIcon name="shield" size={28} /></div>
-      <span className="plate-label verify-result-plate">{plate.toUpperCase()}</span>
-      <StatusPill tone={copy.tone}>{copy.label}</StatusPill>
+      <div className="verified-check">
+        <AppIcon name="shield" size={28} />
+      </div>
+
+      <span className="plate-label verify-result-plate">
+        {plate.toUpperCase()}
+      </span>
+
+      <StatusPill tone={copy.tone}>
+        {copy.label}
+      </StatusPill>
+
       <h2>{copy.heading}</h2>
+
       <p>{result.message}</p>
+
       {typeof result.confidence === 'number' && (
-        <p className="verify-privacy-note">Confidence: {(result.confidence * 100).toFixed(0)}%</p>
+        <p className="verify-privacy-note">
+          Confidence: {(result.confidence * 100).toFixed(0)}%
+        </p>
       )}
-      <button type="button" className="app-button ghost" onClick={onScanAnother}>Scan another plate</button>
+
+      <button
+        type="button"
+        className="app-button ghost"
+        onClick={onScanAnother}
+      >
+        Scan another plate
+      </button>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -95,26 +96,58 @@ function WorkspaceShell({ children, workspace }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isAdmin = workspace === 'admin';
   const links = isAdmin ? adminLinks : passengerLinks;
   const workspaceLabel = isAdmin ? 'Admin workspace' : 'Safety workspace';
+  const navigationId = `${isAdmin ? 'admin' : 'passenger'}-workspace-navigation`;
+
+  function closeMobileNav() {
+    setMobileNavOpen(false);
+  }
 
   function handleSignOut() {
+    closeMobileNav();
     logout();
     navigate('/');
   }
 
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') setMobileNavOpen(false);
+    }
+
+    document.body.classList.add('mobile-navigation-open');
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.classList.remove('mobile-navigation-open');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileNavOpen]);
+
   return (
     <div className={`app-shell ${isAdmin ? 'admin-shell' : ''}`}>
-      <aside className="app-sidebar">
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-nav-overlay"
+          aria-label="Close navigation"
+          onClick={closeMobileNav}
+        />
+      )}
+      <aside className={`app-sidebar ${mobileNavOpen ? 'app-sidebar-mobile-open' : ''}`}>
         <SafetyLogo />
         <div className="sidebar-label">{workspaceLabel}</div>
-        <nav className="app-nav" aria-label={`${workspaceLabel} navigation`}>
+        <nav id={navigationId} className="app-nav" aria-label={`${workspaceLabel} navigation`}>
           {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               className={location.pathname === link.to ? 'active' : ''}
+              onClick={closeMobileNav}
             >
               <AppIcon name={link.icon} />
               <span>{link.label}</span>
@@ -138,7 +171,19 @@ function WorkspaceShell({ children, workspace }) {
       <main className="app-main">
         <header className="mobile-app-header">
           <SafetyLogo />
-          <Link to="/" aria-label="Return home">Exit</Link>
+          <div className="mobile-app-header-actions">
+            <Link className="mobile-app-exit-link" to="/" onClick={closeMobileNav}>Exit</Link>
+            <button
+              type="button"
+              className={`mobile-app-menu-toggle ${mobileNavOpen ? 'mobile-app-menu-toggle-open' : ''}`}
+              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-controls={navigationId}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              <span /><span /><span />
+            </button>
+          </div>
         </header>
         {children}
       </main>

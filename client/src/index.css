@@ -1952,7 +1952,14 @@ a:focus-visible {
   margin-left: 246px;
 }
 
-.mobile-app-header {
+body.mobile-navigation-open {
+  overflow: hidden;
+}
+
+.mobile-app-header,
+.mobile-nav-overlay,
+.mobile-app-header-actions,
+.mobile-app-menu-toggle {
   display: none;
 }
 
@@ -3096,19 +3103,50 @@ a:focus-visible {
 
 @media (max-width: 850px) {
   .app-sidebar {
-    display: none;
+    display: flex;
+    width: min(312px, 88vw);
+    padding: 28px 18px;
+    box-shadow: 12px 0 32px rgba(16, 35, 31, 0.28);
+    pointer-events: none;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
+    visibility: hidden;
+    z-index: 40;
+  }
+
+  .app-sidebar.app-sidebar-mobile-open {
+    pointer-events: auto;
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+    visibility: visible;
+  }
+
+  .mobile-nav-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(16, 35, 31, 0.48);
+    cursor: pointer;
   }
 
   .app-main {
     width: 100%;
+    min-width: 0;
     margin-left: 0;
   }
 
   .mobile-app-header {
+    position: sticky;
+    top: 0;
+    z-index: 25;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 22px;
+    padding: 14px 18px;
     background: #10231f;
     color: #f5f6f0;
   }
@@ -3117,11 +3155,53 @@ a:focus-visible {
     font-size: 16px;
   }
 
-  .mobile-app-header > a {
+  .mobile-app-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-app-exit-link {
     color: #b7ed78;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     text-decoration: none;
+  }
+
+  .mobile-app-menu-toggle {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+    border: 1px solid rgba(183, 237, 120, 0.35);
+    border-radius: 9px;
+    background: transparent;
+    color: #f5f6f0;
+    cursor: pointer;
+  }
+
+  .mobile-app-menu-toggle span {
+    display: block;
+    width: 19px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .mobile-app-menu-toggle-open span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .mobile-app-menu-toggle-open span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-app-menu-toggle-open span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
   }
 
   .app-content {
@@ -3194,8 +3274,26 @@ a:focus-visible {
 }
 
 @media (max-width: 500px) {
+  .app-content {
+    padding: 28px 16px 48px;
+  }
+
   .app-page-intro h1 {
-    font-size: 43px;
+    font-size: clamp(2.25rem, 12vw, 2.7rem);
+  }
+
+  .app-shell .app-button,
+  .driver-search-hero .plate-search-form button[type='submit'] {
+    min-height: 44px;
+  }
+
+  .report-form input,
+  .report-form select,
+  .report-form textarea,
+  .full-input,
+  .search-field input,
+  .driver-search-hero .plate-search-form input {
+    font-size: 16px;
   }
 
   .browse-toolbar,

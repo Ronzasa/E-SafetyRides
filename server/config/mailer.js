@@ -1,17 +1,9 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false, // true for port 465, false for 587 (STARTTLS)
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendPasswordResetEmail(to, resetLink) {
-  await transporter.sendMail({
+  const { error } = await resend.emails.send({
     from: process.env.EMAIL_FROM,
     to,
     subject: 'Reset your E-SafetyRides password',
@@ -35,4 +27,9 @@ export async function sendPasswordResetEmail(to, resetLink) {
       </div>
     `,
   });
+
+  if (error) {
+    console.error('Resend error:', error);
+    throw new Error('Failed to send reset email');
+  }
 }
